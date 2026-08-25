@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CROFT — показатели платформы</title>
+<style>
+  @font-face { font-family: "Tilda Sans"; font-weight: 300; font-display: swap;
+    src: url("https://db.onlinewebfonts.com/t/78ef8357d99ff7635b5d6bcc5896ea5f.woff2") format("woff2"); }
+  @font-face { font-family: "Tilda Sans"; font-weight: 600; font-display: swap;
+    src: url("https://db.onlinewebfonts.com/t/207d85b8fdcba877dad19498bc1023a3.woff2") format("woff2"); }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #0F1F35; color: #E9F0F8; overflow-x: hidden;
+    font-family: "Tilda Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  a { color: #4FC3F0; text-decoration: none; }
+  a:hover { color: #8ad9f4; }
+  @keyframes fanSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  .stage {
+    position: relative; min-height: 100vh; overflow: hidden; background: #0F1F35;
+    padding: 70px 96px 74px; display: flex; flex-direction: column; gap: 34px;
+  }
+  .glow, .net { position: absolute; inset: 0; pointer-events: none; }
+  .glow-a { background: radial-gradient(ellipse 1250px 820px at 20% 6%, rgba(74,124,190,0.17), rgba(0,0,0,0) 66%); }
+  .glow-b { background: radial-gradient(ellipse 900px 620px at 96% 104%, rgba(60,110,175,0.14), rgba(0,0,0,0) 66%); }
+  .net { width: 100%; height: 100%; opacity: 0.6; }
+
+  .head { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 26px; }
+  .h1 { font-weight: 600; font-size: 72px; line-height: 1.06; letter-spacing: -0.02em; color: #E9F0F8; max-width: 620px; text-wrap: pretty; margin: 0; }
+  .pill {
+    display: inline-flex; align-items: center; border: 1px solid rgba(232,240,247,0.5);
+    border-radius: 999px; padding: 15px 34px; font-weight: 300; font-size: 20px; color: #E3EBF3;
+    cursor: default; transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+  }
+  .pill:hover { background-color: #E9F0F8; color: #10314F; border-color: #E9F0F8; }
+
+  .strip { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(272px, 1fr)); gap: 34px 0; }
+  .cell { display: flex; min-width: 0; flex-direction: column; gap: 16px; padding-right: 24px; }
+  .cell + .cell { padding-left: 32px; border-left: 1px solid rgba(255,255,255,0.11); }
+  .cell:last-child { padding-right: 0; }
+  .row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+  .fig { font-weight: 600; font-size: 62px; line-height: 0.88; letter-spacing: -0.025em; color: #EAF1F8; white-space: nowrap; }
+  .unit { font-weight: 300; font-size: 24px; color: #4FC3F0; }
+  .pre { font-weight: 300; font-size: 16px; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(220,233,242,0.45); }
+  .cap { font-weight: 300; font-size: 14px; line-height: 1.45; letter-spacing: 0.09em; text-transform: uppercase; color: rgba(220,233,242,0.55); max-width: 180px; }
+
+  .demo { position: relative; display: flex; flex-direction: column; gap: 20px; }
+  .hint { font-weight: 300; font-size: 15px; color: rgba(220,233,242,0.5); }
+
+  .box {
+    position: relative; background: #2E3439; border: 1px solid #1B1F22; border-radius: 10px;
+    box-shadow: 0 26px 60px rgba(0,0,0,0.4); overflow: hidden;
+  }
+  .roof {
+    height: 17px; background-color: #2E3439; border-bottom: 1px solid #1B1F22;
+    background-image: repeating-linear-gradient(90deg, rgba(0,0,0,0.32) 0 2px, rgba(255,255,255,0.05) 2px 4px, rgba(0,0,0,0) 4px 10px);
+  }
+  .bay {
+    position: relative; background: #171B1F; box-shadow: inset 0 10px 22px rgba(0,0,0,0.5);
+    padding: 11px 12px; display: flex; align-items: stretch; gap: 10px;
+  }
+  .cap-wall {
+    width: 13px; flex: none; align-self: stretch; border-radius: 2px;
+    background-image: repeating-linear-gradient(0deg, #B4BCC1 0 2px, #8A949B 2px 4px);
+    box-shadow: inset 0 0 0 1px rgba(20,24,28,0.35);
+  }
+  .rows { flex: 1 1 0; min-width: 0; display: flex; align-items: stretch; gap: 10px; }
+  .floor { height: 15px; background-image: linear-gradient(180deg, #3C4349, #262B30); border-top: 1px solid #14181B; }
+  .cast { position: absolute; width: 17px; height: 13px; border-radius: 2px; background: #14181B; }
+
+  .sec {
+    flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 7px;
+    padding: 8px 8px 9px; border-radius: 6px; cursor: pointer;
+    background: rgba(180,188,193,0.03); border: 1px solid rgba(180,188,193,0.13);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+  .sec:hover { border-color: rgba(232,98,42,0.5); background-color: rgba(232,98,42,0.05); }
+  .light { height: 3px; border-radius: 2px; background-color: #E6EEF1; box-shadow: 0 0 12px rgba(226,238,241,0.6); transition: background-color 0.35s ease, box-shadow 0.35s ease; }
+  .shead { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: nowrap; }
+  .slabel { font-weight: 300; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(214,228,238,0.42); white-space: nowrap; }
+  .sstate { display: flex; align-items: center; gap: 5px; flex: none; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background-color: #6CBE45; box-shadow: 0 0 6px rgba(108,190,69,0.9); transition: background-color 0.3s ease, box-shadow 0.3s ease; }
+  .stxt { font-weight: 300; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(214,228,238,0.45); white-space: nowrap; transition: color 0.3s ease; }
+  .cable {
+    height: 6px; border-radius: 1px; opacity: 0.75; transition: opacity 0.35s ease;
+    background-image: repeating-linear-gradient(90deg, #3E6EA8 0 1.5px, rgba(0,0,0,0) 1.5px 4px, #737F88 4px 5.5px, rgba(0,0,0,0) 5.5px 9px);
+  }
+  .shelf { display: flex; flex-direction: column; gap: 3px; }
+  .units { display: flex; gap: 4px; }
+  .plate { height: 2px; border-radius: 1px; background: linear-gradient(90deg, #8D979E, #6E7880); }
+  .bus { height: 3px; border-radius: 2px; background: rgba(108,190,69,0.45); transition: background 0.3s ease; }
+
+  .asic {
+    flex: 1 1 0; min-width: 0; height: 29px; border-radius: 3px; border: 1px solid #444D54;
+    position: relative; display: flex; align-items: center; justify-content: center;
+    background-image: linear-gradient(180deg, #7C878F, #5C666D);
+    transition: background-image 0.3s ease, opacity 0.3s ease;
+  }
+  .fan {
+    width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(16,20,24,0.5);
+    animation: fanSpin 1.4s linear infinite; transition: opacity 0.3s ease;
+    background-image:
+      radial-gradient(circle 3px at 50% 50%, rgba(16,20,24,0.75) 0 3px, rgba(0,0,0,0) 3px),
+      conic-gradient(from 0deg, rgba(16,20,24,0.5) 0deg 18deg, rgba(0,0,0,0) 18deg 90deg, rgba(16,20,24,0.5) 90deg 108deg, rgba(0,0,0,0) 108deg 180deg, rgba(16,20,24,0.5) 180deg 198deg, rgba(0,0,0,0) 198deg 270deg, rgba(16,20,24,0.5) 270deg 288deg, rgba(0,0,0,0) 288deg 360deg);
+  }
+  .led { position: absolute; right: 3px; bottom: 3px; width: 3px; height: 3px; border-radius: 50%; background-color: #6CBE45; box-shadow: 0 0 4px rgba(108,190,69,0.95); transition: background-color 0.3s ease, box-shadow 0.3s ease; }
+
+  .sec.off .light { background-color: #39424A; box-shadow: none; }
+  .sec.off .cable { opacity: 0.3; }
+  .sec.off .bus { background: rgba(120,130,140,0.2); }
+  .sec.off .dot { background-color: #E8622A; box-shadow: 0 0 6px rgba(232,98,42,0.85); }
+  .sec.off .stxt { color: rgba(240,138,90,0.95); }
+  .asic.off { background-image: linear-gradient(180deg, #464F56, #363E44); opacity: 0.62; }
+  .asic.off .fan { animation-play-state: paused; opacity: 0.4; }
+  .asic.off .led { background-color: #4A5359; box-shadow: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fan { animation: none; }
+  }
+  @media (max-width: 900px) {
+    .stage { padding: 48px 28px 52px; gap: 26px; }
+    .h1 { font-size: 44px; }
+    .pill { font-size: 17px; padding: 12px 26px; }
+    .fig { font-size: 46px; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="glow glow-a"></div>
+  <div class="glow glow-b"></div>
+  <svg class="net" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <path d="M300 196 L382 250 L340 566 L612 712 L966 600 L1312 188 L1440 116" fill="none" stroke="rgba(163,205,255,0.17)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M966 600 L1356 668 L1170 832" fill="none" stroke="rgba(163,205,255,0.17)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M382 250 L612 712" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <g fill="rgba(140,198,255,0.45)">
+      <circle cx="300" cy="196" r="3"></circle><circle cx="382" cy="250" r="2.5"></circle>
+      <circle cx="340" cy="566" r="3"></circle><circle cx="612" cy="712" r="2.5"></circle>
+      <circle cx="966" cy="600" r="3"></circle><circle cx="1312" cy="188" r="3"></circle>
+      <circle cx="1356" cy="668" r="2.5"></circle><circle cx="1170" cy="832" r="3"></circle>
+    </g>
+  </svg>
+
+  <div class="head">
+    <h1 class="h1">Инфраструктура под управлением</h1>
+    <div class="pill">Показатели платформы</div>
+  </div>
+
+  <div class="strip">
+    <div class="cell">
+      <div class="row"><div class="fig" data-num>45 000</div></div>
+      <div class="cap">устройств под управлением</div>
+    </div>
+    <div class="cell">
+      <div class="row"><div class="fig" data-num>12</div></div>
+      <div class="cap">площадок подключено</div>
+    </div>
+    <div class="cell">
+      <div class="row"><div class="pre">более</div><div class="fig" data-num>100</div><div class="unit">МВт</div></div>
+      <div class="cap">отключается ежедневно</div>
+    </div>
+    <div class="cell">
+      <div class="row"><div class="fig" data-num>2</div><div class="unit">мин</div></div>
+      <div class="cap">на отключение любого объёма</div>
+    </div>
+  </div>
+
+  <div class="demo">
+    <div class="hint">Наведите курсор на любую секцию — оборудование в ней остановится</div>
+    <div class="box">
+      <div class="roof"></div>
+      <div class="bay">
+        <div class="cap-wall"></div>
+        <div class="rows" id="rows"></div>
+        <div class="cap-wall"></div>
+      </div>
+      <div class="floor"></div>
+      <div class="cast" style="left: 6px; top: 5px;"></div>
+      <div class="cast" style="right: 6px; top: 5px;"></div>
+      <div class="cast" style="left: 6px; bottom: 5px;"></div>
+      <div class="cast" style="right: 6px; bottom: 5px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var SECTIONS = 4, SHELVES = 3, UNITS = 6;
+
+  var rows = document.getElementById('rows');
+  for (var s = 1; s <= SECTIONS; s++) {
+    var sec = document.createElement('div');
+    sec.className = 'sec';
+    var html = '<div class="light"></div>'
+      + '<div class="shead"><div class="slabel">Секция ' + s + '</div>'
+      + '<div class="sstate"><div class="dot"></div><div class="stxt">в работе</div></div></div>'
+      + '<div class="cable"></div>';
+    for (var sh = 0; sh < SHELVES; sh++) {
+      html += '<div class="shelf"><div class="units">';
+      for (var u = 0; u < UNITS; u++) {
+        html += '<div class="asic"><div class="fan"></div><div class="led"></div></div>';
+      }
+      html += '</div><div class="plate"></div></div>';
+    }
+    html += '<div class="bus"></div>';
+    sec.innerHTML = html;
+    rows.appendChild(sec);
+  }
+
+  var timers = new Map();
+  function setSection(sec, off) {
+    (timers.get(sec) || []).forEach(clearTimeout);
+    var pending = [];
+    timers.set(sec, pending);
+    sec.classList.toggle('off', off);
+    var txt = sec.querySelector('.stxt');
+    if (txt) txt.textContent = off ? 'стоп' : 'в работе';
+    var units = [].slice.call(sec.querySelectorAll('.asic'));
+    units.forEach(function (a, i) {
+      var delay = off ? i * 22 : (units.length - 1 - i) * 15;
+      pending.push(setTimeout(function () { a.classList.toggle('off', off); }, delay));
+    });
+  }
+
+  [].forEach.call(document.querySelectorAll('.sec'), function (sec) {
+    sec.addEventListener('mouseenter', function () { setSection(sec, true); });
+    sec.addEventListener('mouseleave', function () { setSection(sec, false); });
+    sec.addEventListener('touchstart', function () { setSection(sec, true); }, { passive: true });
+    sec.addEventListener('touchend', function () { setSection(sec, false); });
+  });
+
+  var figs = [].slice.call(document.querySelectorAll('[data-num]')).map(function (el) {
+    return { el: el, target: parseInt(el.textContent.replace(/[^0-9]/g, ''), 10) };
+  });
+  function fmt(n, target) {
+    return target >= 10000 ? n.toLocaleString('ru-RU').replace(/\u00A0/g, ' ') : String(n);
+  }
+  var counted = false;
+  function countUp() {
+    if (counted) return;
+    counted = true;
+    figs.forEach(function (f, i) {
+      if (!isFinite(f.target)) return;
+      var t0 = performance.now() + 150 * i, dur = 1500;
+      f.el.textContent = fmt(0, f.target);
+      (function step(now) {
+        var p = Math.max(0, Math.min(1, (now - t0) / dur));
+        f.el.textContent = fmt(Math.round(f.target * (1 - Math.pow(1 - p, 3))), f.target);
+        if (p < 1) requestAnimationFrame(step);
+      })(performance.now());
+    });
+  }
+
+  // Parent page can trigger the count-up precisely:
+  //   iframe.contentWindow.postMessage({ type: 'croft:start' }, '*');
+  window.addEventListener('message', function (e) {
+    if (e.data && e.data.type === 'croft:start') { counted = false; countUp(); }
+  });
+
+  // Reports its natural height so the parent can size the iframe if it wants:
+  //   window.addEventListener('message', e => { if (e.data.type === 'croft:height') iframe.style.height = e.data.height + 'px'; });
+  function postHeight() {
+    if (window.parent === window) return;
+    var h = document.querySelector('.stage').scrollHeight;
+    window.parent.postMessage({ type: 'croft:height', height: h }, '*');
+  }
+
+  window.addEventListener('load', function () { countUp(); postHeight(); });
+  window.addEventListener('resize', postHeight);
+  if (document.readyState === 'complete') { countUp(); postHeight(); }
+})();
+</script>
+</body>
+</html>
