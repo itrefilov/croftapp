@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CROFT — основные функции</title>
+<style>
+  @font-face { font-family:"Tilda Sans"; font-weight:300; font-display:swap;
+    src:url("https://db.onlinewebfonts.com/t/78ef8357d99ff7635b5d6bcc5896ea5f.woff2") format("woff2"); }
+  @font-face { font-family:"Tilda Sans"; font-weight:600; font-display:swap;
+    src:url("https://db.onlinewebfonts.com/t/207d85b8fdcba877dad19498bc1023a3.woff2") format("woff2"); }
+
+  :root{
+    --bg:#0F1F35; --card:#16273E; --cardline:rgba(140,190,240,.16);
+    --panel:#0C1A2B; --panelline:rgba(140,190,240,.13);
+    --lite:#E9F0F8; --sheet:#EDF2F7; --ink:#10314F;
+    --acc:#4FC3F0; --org:#E8622A;
+    --dim:rgba(214,228,238,.42);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%}
+  body{background:var(--bg);color:var(--lite);overflow-x:hidden;
+    font-family:"Tilda Sans","Helvetica Neue",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+
+  .screen{position:relative;width:100%;height:100vh;min-height:100vh;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+    background:
+      radial-gradient(ellipse 55% 26% at 20% 14%, rgba(74,124,190,.16), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 46% 22% at 96% 44%, rgba(60,110,175,.15), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 52% 24% at 8% 74%, rgba(74,124,190,.13), rgba(0,0,0,0) 68%),
+      linear-gradient(180deg, #080D10 0%, #0C1727 11%, #0F1F35 24%, #0F1F35 100%);
+    background-size: 100% 200vh;
+    background-repeat: no-repeat;
+    background-position: 0 -100vh;
+  }
+  .stage{position:relative;flex:none;width:1920px;height:1080px;padding:20px 96px 142px;
+    display:flex;flex-direction:column;justify-content:center;gap:40px;
+    transform:scale(var(--s,1));transform-origin:center center}
+
+  .net{position:absolute;left:0;width:100%;height:200vh;opacity:.6;pointer-events:none}
+
+  .head{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:26px}
+  .h1{font-weight:600;font-size:72px;line-height:1.06;letter-spacing:-.02em;margin:0;color:var(--lite)}
+  .pill{display:inline-flex;align-items:center;border:1px solid rgba(232,240,247,.5);
+    border-radius:999px;padding:15px 34px;font-weight:300;font-size:20px;color:#E3EBF3;
+    cursor:default;transition:background-color .25s ease,color .25s ease,border-color .25s ease}
+  .pill:hover{background-color:var(--lite);color:var(--ink);border-color:var(--lite)}
+
+  .grid{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+  .card{position:relative;background:var(--card);border:1px solid var(--cardline);border-radius:18px;
+    padding:24px 26px 30px;display:flex;flex-direction:column;gap:20px;
+    box-shadow:0 20px 48px rgba(4,14,28,.38);
+    transition:transform .4s cubic-bezier(.2,.7,.3,1),border-color .4s ease,box-shadow .4s ease}
+  .card:hover{transform:translateY(-6px);border-color:rgba(79,195,240,.55);
+    box-shadow:0 34px 70px rgba(4,14,28,.55)}
+  .ct{margin:0;font-weight:600;font-size:29px;line-height:1.14;letter-spacing:-.01em;color:#F2F7FC}
+  .cp{margin:0;font-weight:300;font-size:17px;line-height:1.52;color:rgba(226,238,248,.7)}
+
+  .panel{position:relative;height:248px;border-radius:12px;background:var(--panel);
+    border:1px solid var(--panelline);overflow:hidden}
+  .plab{position:absolute;left:16px;top:14px;z-index:4;font-weight:300;font-size:10px;
+    letter-spacing:.15em;text-transform:uppercase;color:var(--dim)}
+  .pval{position:absolute;right:16px;top:12px;z-index:4;font-weight:600;font-size:15px;
+    color:var(--lite);font-variant-numeric:tabular-nums;transition:color .3s ease}
+  .pval small{font-weight:300;font-size:11px;color:var(--dim);margin-left:4px}
+
+  /* --- 1: нагрузка площадки и окно DR --- */
+  .chart{position:absolute;left:0;right:0;top:44px;bottom:22px}
+  .chart svg{width:100%;height:100%;display:block}
+  .grid-l{stroke:rgba(140,190,240,.12);stroke-width:1;vector-effect:non-scaling-stroke}
+  .dr-band{fill:rgba(233,240,248,.09)}
+  .dr-edge{stroke:rgba(233,240,248,.34);stroke-width:1;vector-effect:non-scaling-stroke}
+  .area{fill:url(#gLite)}
+  .line{fill:none;stroke:var(--lite);stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round;
+    vector-effect:non-scaling-stroke}
+  .cursor{position:absolute;top:44px;bottom:22px;width:1px;background:rgba(233,240,248,.5);z-index:3}
+  .drlab{position:absolute;top:54px;z-index:5;font-weight:600;font-size:19px;letter-spacing:.02em;
+    color:#FFFFFF;text-shadow:0 0 16px rgba(233,240,248,.5);
+    transform:translateX(-50%);opacity:0;transition:opacity .3s ease}
+  .drsub{position:absolute;top:79px;z-index:5;font-weight:300;font-size:9px;letter-spacing:.12em;
+    text-transform:uppercase;color:rgba(233,240,248,.62);transform:translateX(-50%);white-space:nowrap;
+    opacity:0;transition:opacity .3s ease}
+  .ax{position:absolute;left:16px;z-index:4;font-weight:300;font-size:9px;letter-spacing:.1em;
+    color:rgba(214,228,238,.34)}
+
+  /* --- 2: таблица отчёта --- */
+  .desk{position:absolute;inset:38px 16px 16px}
+  .stack{position:absolute;left:0;top:6px;width:64%;height:calc(100% - 12px);border-radius:4px;
+    background:rgba(233,240,248,.07);transform:translate(9px,9px)}
+  .stack.two{background:rgba(233,240,248,.11);transform:translate(4.5px,4.5px)}
+  .sheet{position:absolute;left:0;top:0;width:64%;height:100%;border-radius:4px;background:var(--sheet);
+    padding:11px 12px;display:flex;flex-direction:column;overflow:hidden;
+    box-shadow:0 12px 28px rgba(4,14,28,.55)}
+  .xl-h,.xl-r{display:grid;grid-template-columns:1.5fr .8fr .85fr .6fr;align-items:center}
+  .xl-h{border-bottom:1px solid rgba(16,49,79,.3);padding-bottom:6px;margin-bottom:3px}
+  .xl-h span{font-weight:600;font-size:10px;letter-spacing:.06em;color:rgba(16,49,79,.6);
+    text-transform:uppercase}
+  .xl-r{padding:12px 0;border-bottom:1px solid rgba(16,49,79,.1)}
+  .xl-r span{font-weight:300;font-size:13px;color:rgba(16,49,79,.88);font-variant-numeric:tabular-nums;
+    letter-spacing:-.01em;opacity:var(--o,0)}
+  .xl-r span:first-child{font-weight:600;color:var(--ink)}
+  .xl-h span:not(:first-child),.xl-r span:not(:first-child){text-align:right}
+  .meta{position:absolute;right:0;top:2px;width:30%;display:flex;flex-direction:column;gap:9px}
+  .meta div{font-weight:300;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  .meta div.k{color:rgba(233,240,248,.66);font-weight:600;letter-spacing:.06em}
+  .ready{position:absolute;right:0;bottom:2px;background:var(--lite);color:var(--ink);border-radius:5px;
+    padding:5px 10px;font-weight:600;font-size:11px;letter-spacing:.04em;opacity:0;
+    transition:opacity .35s ease}
+  .ready.on{opacity:1}
+
+  /* --- 3: сводка по парку --- */
+  .tiles6{position:absolute;left:16px;right:16px;top:40px;bottom:34px;display:grid;
+    grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:8px}
+  .tile{background:rgba(233,240,248,.06);border:1px solid rgba(140,190,240,.14);border-radius:7px;
+    padding:7px 9px;display:flex;flex-direction:column;justify-content:center;gap:4px;
+    transition:border-color .3s ease,background-color .3s ease}
+  .tk{font-weight:300;font-size:8.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--dim);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tv{font-weight:600;font-size:18px;line-height:1;color:var(--lite);font-variant-numeric:tabular-nums;
+    transition:color .3s ease;white-space:nowrap}
+  .tv u{font-weight:300;font-size:10px;color:var(--dim);text-decoration:none;margin-left:3px}
+  .tile.alert{border-color:rgba(232,98,42,.6);background:rgba(232,98,42,.08)}
+  .tile.alert .tv{color:var(--org)}
+  .alarm{position:absolute;left:16px;right:16px;bottom:13px;height:12px;z-index:4;
+    display:flex;align-items:center;gap:8px;opacity:0;transition:opacity .3s ease}
+  .alarm.on{opacity:1}
+  .alarm b{flex:none;width:3px;height:12px;background:var(--org);display:block}
+  .alarm span{font-weight:300;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--org)}
+  .okline{position:absolute;left:16px;right:16px;bottom:13px;height:12px;display:flex;align-items:center;
+    font-weight:300;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+    color:rgba(214,228,238,.3);transition:opacity .3s ease}
+  .okline.hide{opacity:0}
+
+  @media (prefers-reduced-motion: reduce){ .card,.ready,.alarm,.drlab,.drsub{transition:none} }
+  @media (max-width:900px){
+    .screen{display:block;height:auto}
+    .screen{background:var(--bg)}
+    .net{height:100%;top:0 !important}
+    .stage{width:100%;height:auto;min-height:100vh;transform:none;justify-content:flex-start;
+      padding:48px 24px 54px;gap:28px}
+    .h1{font-size:42px}
+    .pill{font-size:17px;padding:12px 26px}
+    .grid{grid-template-columns:1fr;gap:18px}
+    .ct{font-size:25px}
+    .cp{font-size:16px}
+    .panel{height:200px}
+  }
+</style>
+</head>
+<body>
+<div class="screen">
+  <svg class="net" style="top:-100vh" viewBox="0 0 1920 2160" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M340 210 L520 300 L470 690 L860 1010 L1330 1290 L1760 980 L1920 830" fill="none" stroke="rgba(163,205,255,0.17)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M1330 1290 L1830 1470 L1520 1900 L1010 2010 L560 1780 L240 2090" fill="none" stroke="rgba(163,205,255,0.17)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M1760 180 L1420 560 L1830 1470" fill="none" stroke="rgba(163,205,255,0.13)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M860 1010 L1010 2010" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M470 690 L140 950 L300 1520" fill="none" stroke="rgba(163,205,255,0.13)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <g fill="rgba(140,198,255,0.45)">
+      <circle cx="340" cy="210" r="3"></circle><circle cx="520" cy="300" r="2.5"></circle>
+      <circle cx="470" cy="690" r="3"></circle><circle cx="1420" cy="560" r="2.5"></circle>
+      <circle cx="140" cy="950" r="2.5"></circle><circle cx="1760" cy="980" r="3"></circle>
+      <circle cx="860" cy="1010" r="3"></circle><circle cx="1330" cy="1290" r="3"></circle>
+      <circle cx="300" cy="1520" r="2.5"></circle><circle cx="1830" cy="1470" r="3"></circle>
+      <circle cx="560" cy="1780" r="2.5"></circle><circle cx="1520" cy="1900" r="3"></circle>
+      <circle cx="1010" cy="2010" r="3"></circle><circle cx="240" cy="2090" r="2.5"></circle>
+    </g>
+  </svg>
+
+  <div class="stage">
+    <div class="head">
+      <h1 class="h1">Основные функции</h1>
+      <div class="pill">Что делает платформа</div>
+    </div>
+
+    <div class="grid">
+
+      <!-- 1 -->
+      <div class="card">
+        <div class="panel" id="p1">
+          <div class="plab">Нагрузка площадки</div>
+          <div class="pval"><span id="mw">10</span><small>МВт</small></div>
+          <div class="chart">
+            <svg viewBox="0 0 500 150" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="gLite" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="rgba(233,240,248,.34)"/>
+                  <stop offset="1" stop-color="rgba(233,240,248,0)"/>
+                </linearGradient>
+                <clipPath id="clip1"><rect id="clipR" x="0" y="0" width="0" height="150"/></clipPath>
+              </defs>
+              <line class="grid-l" x1="0" y1="28.3" x2="500" y2="28.3"/>
+              <line class="grid-l" x1="0" y1="133.3" x2="500" y2="133.3"/>
+              <g clip-path="url(#clip1)">
+                <rect class="dr-band" x="170" y="0" width="170" height="150"/>
+                <line class="dr-edge" x1="170" y1="0" x2="170" y2="150"/>
+                <line class="dr-edge" x1="340" y1="0" x2="340" y2="150"/>
+                <path class="area" id="area1"/>
+                <path class="line" id="line1"/>
+              </g>
+            </svg>
+          </div>
+          <div class="ax" style="top:44px">10 МВт</div>
+          <div class="ax" style="bottom:26px">1 МВт</div>
+          <div class="cursor" id="cur1" style="left:0"></div>
+          <div class="drlab" id="dr1" style="left:51%">DR</div>
+          <div class="drsub" id="dr1s" style="left:51%">Demand Response</div>
+        </div>
+        <h3 class="ct">Массовое управление</h3>
+        <p class="cp">Отключаем и включаем любой объём оборудования за две минуты — вручную или по расписанию. Планировщик держит график отключений сразу по всем площадкам.</p>
+      </div>
+
+      <!-- 2 -->
+      <div class="card">
+        <div class="panel" id="p2">
+          <div class="plab">Сводный отчёт</div>
+          <div class="pval" id="rnum">№ 128</div>
+          <div class="desk">
+            <div class="stack"></div>
+            <div class="stack two"></div>
+            <div class="sheet">
+              <div class="xl-h"><span>Устройство</span><span>кВт·ч</span><span>TH/s</span><span>%</span></div>
+              <div id="rows2"></div>
+            </div>
+            <div class="meta">
+              <div class="k">Ежедневно 09:00</div>
+              <div>Потребление</div>
+              <div>Хэшрейт</div>
+              <div>Аптайм</div>
+              <div class="k">PDF · XLSX · API</div>
+            </div>
+            <div class="ready" id="ready2">Готов</div>
+          </div>
+        </div>
+        <h3 class="ct">Формирование отчётов</h3>
+        <p class="cp">Собираем данные со всех моделей устройств и приводим их к единому виду. Отчёты формируются по необходимости, содержат показатели потребления, хэшрейта и аптайма за выбранный период.</p>
+      </div>
+
+      <!-- 3 -->
+      <div class="card">
+        <div class="panel" id="p3">
+          <div class="plab">Парк оборудования</div>
+          <div class="pval" id="st3">Норма</div>
+          <div class="tiles6">
+            <div class="tile"><div class="tk">Устройств онлайн</div><div class="tv" id="d1">9 826</div></div>
+            <div class="tile"><div class="tk">Офлайн</div><div class="tv" id="d2">2 332</div></div>
+            <div class="tile" id="tileErr"><div class="tk">С ошибками</div><div class="tv" id="d3">112</div></div>
+            <div class="tile"><div class="tk">Мощность</div><div class="tv" id="d4">42.0<u>МВт</u></div></div>
+            <div class="tile"><div class="tk">Хешрейт</div><div class="tv" id="d5">2 519<u>PH/s</u></div></div>
+            <div class="tile"><div class="tk">Площадок</div><div class="tv">12</div></div>
+          </div>
+          <div class="okline" id="ok3">Все площадки на связи</div>
+          <div class="alarm" id="al3"><b></b><span>Гексакон — потеря связи, 118 устройств</span></div>
+        </div>
+        <h3 class="ct">Сводные дашборды</h3>
+        <p class="cp">Состояние объекта от отдельного устройства до целой площадки на одном экране. Экстренные оповещения приходят в момент отклонения, а не в отчёте на следующий день.</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- масштабирование холста ---------- */
+  var BASE_W=1920, BASE_H=1080, MIN_S=0.4, MAX_S=1.5;
+  var stageEl=document.querySelector('.stage');
+  function fit(){
+    if(window.innerWidth<=900){ stageEl.style.removeProperty('--s'); return; }
+    var s=Math.min(window.innerWidth/BASE_W, window.innerHeight/BASE_H);
+    stageEl.style.setProperty('--s', Math.max(MIN_S,Math.min(MAX_S,s)).toFixed(4));
+  }
+  function postHeight(){
+    if(window.parent===window) return;
+    var h = window.innerWidth<=900 ? stageEl.scrollHeight : Math.round(window.innerHeight);
+    window.parent.postMessage({type:'croft:height', height:h}, '*');
+  }
+
+  function smooth(a,b,x){ if(x<=a) return 0; if(x>=b) return 1; var t=(x-a)/(b-a); return t*t*(3-2*t); }
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function ru(n){ return Math.round(n).toLocaleString('ru-RU').replace(/ /g,' '); }
+
+  /* ================= 1. НАГРУЗКА И ОКНО DR ================= */
+  var W1=500, H1=150, N1=180;
+  var MAXMW=12, HI=10, LO=1;                 // шкала и уровни, МВт
+  var DR_A=0.34, DR_B=0.68, EDGE=0.008;      // окно DR и резкость фронтов
+  var line1=document.getElementById('line1'), area1=document.getElementById('area1'),
+      clipR=document.getElementById('clipR'), cur1=document.getElementById('cur1'),
+      dr1=document.getElementById('dr1'), dr1s=document.getElementById('dr1s'),
+      mw=document.getElementById('mw');
+
+  function load(u){ return HI - (HI-LO)*(smooth(DR_A,DR_A+EDGE,u) - smooth(DR_B,DR_B+EDGE,u)); }
+  function yOf(v){ return (1 - v/MAXMW)*(H1-10)+5; }
+
+  (function build1(){
+    var pts=[];
+    for(var i=0;i<=N1;i++){ var u=i/N1; pts.push([u*W1, yOf(load(u))]); }
+    var d='M'+pts.map(function(p){ return p[0].toFixed(1)+' '+p[1].toFixed(1); }).join(' L');
+    line1.setAttribute('d', d);
+    area1.setAttribute('d', d+' L'+W1+' '+H1+' L0 '+H1+' Z');
+  })();
+
+  var P1=10.4;
+  function frame1(t){
+    var ph=(t%P1)/P1, rev=smooth(0.02,0.86,ph);
+    clipR.setAttribute('width',(rev*W1).toFixed(1));
+    cur1.style.left=(rev*100).toFixed(2)+'%';
+    cur1.style.opacity = (rev>0.001 && rev<0.999) ? 1 : 0;
+    mw.textContent = Math.round(load(rev));
+    var on = rev > DR_A+0.03 ? 1 : 0;
+    dr1.style.opacity = on; dr1s.style.opacity = on ? .9 : 0;
+  }
+
+  /* ================= 2. ТАБЛИЦА ОТЧЁТА ================= */
+  var DATA=[
+    ['S19-0421','3.25','95.1','99.8'],
+    ['S21-0071','3.55','200.1','99.9'],
+    ['M50S-014','3.28','126.0','97.2'],
+    ['M56S-207','3.41','212.4','98.8']
+  ];
+  var rowEls=[];
+  (function build2(){
+    var host=document.getElementById('rows2');
+    DATA.forEach(function(r){
+      var d=document.createElement('div'); d.className='xl-r';
+      d.innerHTML = r.map(function(c){ return '<span>'+c+'</span>'; }).join('');
+      host.appendChild(d); rowEls.push(d);
+    });
+  })();
+
+  var sheetReady=document.getElementById('ready2'), rnum=document.getElementById('rnum');
+  var P2=9.6, lastRep=-1;
+  function frame2(t){
+    var ph=(t%P2)/P2, k=Math.floor(t/P2);
+    if(k!==lastRep){ lastRep=k; rnum.textContent='№ '+(128+k); }
+    var fade=1-smooth(0.92,0.985,ph);
+    rowEls.forEach(function(el,i){
+      var a=0.03+i*0.075;
+      el.style.setProperty('--o', (smooth(a,a+0.05,ph)*fade).toFixed(3));
+    });
+    sheetReady.classList.toggle('on', ph>0.45 && ph<0.92);
+  }
+
+  /* ================= 3. СВОДКА ПО ПАРКУ ================= */
+  var d1=document.getElementById('d1'), d2=document.getElementById('d2'), d3=document.getElementById('d3'),
+      d4=document.getElementById('d4'), d5=document.getElementById('d5'),
+      tileErr=document.getElementById('tileErr'), al3=document.getElementById('al3'),
+      ok3=document.getElementById('ok3'), st3=document.getElementById('st3');
+  var cur3={on:9826, off:2332, err:112, pw:42.0, hr:2519};
+  var P3=13.5, AL_A=0.58, AL_B=0.76;
+
+  function frame3(t){
+    var ph=(t%P3)/P3, alert = ph>AL_A && ph<AL_B;
+    var tg = alert
+      ? {on:9708, off:2450, err:168, pw:39.4, hr:2402}
+      : {on:9826+Math.sin(t*0.45)*11, off:2332+Math.sin(t*0.37)*7, err:112+Math.sin(t*0.6)*3,
+         pw:42.0+Math.sin(t*0.4)*0.22, hr:2519+Math.sin(t*0.33)*6};
+    for(var k in tg) cur3[k]=lerp(cur3[k], tg[k], 0.05);
+
+    d1.textContent=ru(cur3.on);
+    d2.textContent=ru(cur3.off);
+    d3.textContent=ru(cur3.err);
+    d4.innerHTML=cur3.pw.toFixed(1)+'<u>МВт</u>';
+    d5.innerHTML=ru(cur3.hr)+'<u>PH/s</u>';
+
+    tileErr.classList.toggle('alert', alert);
+    al3.classList.toggle('on', alert);
+    ok3.classList.toggle('hide', alert);
+    st3.textContent = alert ? 'Тревога' : 'Норма';
+    st3.style.color = alert ? 'var(--org)' : 'var(--lite)';
+  }
+
+  /* ---------- общий цикл ---------- */
+  var t0=null;
+  function loop(now){
+    if(t0===null) t0=now;
+    var t=(now-t0)/1000;
+    frame1(t); frame2(t); frame3(t);
+    requestAnimationFrame(loop);
+  }
+  function staticState(){
+    clipR.setAttribute('width', W1); cur1.style.opacity=0;
+    dr1.style.opacity=1; dr1s.style.opacity=.9; mw.textContent=HI;
+    rowEls.forEach(function(el){ el.style.setProperty('--o',1); });
+    sheetReady.classList.add('on');
+  }
+
+  fit(); postHeight();
+  if(reduce) staticState(); else requestAnimationFrame(loop);
+  window.addEventListener('resize', function(){ fit(); postHeight(); });
+  window.addEventListener('load', function(){ fit(); postHeight(); });
+  window.addEventListener('message', function(e){
+    if(e.data && e.data.type==='croft:start'){ t0=null; }
+  });
+})();
+</script>
+</body>
+</html>
