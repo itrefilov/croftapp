@@ -20,13 +20,20 @@
   a:hover { color: #8ad9f4; }
   @keyframes fanSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
+  .screen {
+    position: relative; width: 100%; height: 100vh; min-height: 100vh;
+    overflow: hidden; background: #0F1F35;
+    display: flex; align-items: center; justify-content: center;
+  }
   .stage {
-    position: relative; min-height: 100vh; overflow: hidden; background: #0F1F35;
-    padding: 70px 96px 74px; display: flex; flex-direction: column; gap: 34px;
+    position: relative; flex: none; width: 1920px; height: 1080px;
+    padding: 70px 96px 74px; display: flex; flex-direction: column;
+    justify-content: center; gap: 34px;
+    transform: scale(var(--s, 1)); transform-origin: center center;
   }
   .glow, .net { position: absolute; inset: 0; pointer-events: none; }
-  .glow-a { background: radial-gradient(ellipse 1250px 820px at 20% 6%, rgba(74,124,190,0.17), rgba(0,0,0,0) 66%); }
-  .glow-b { background: radial-gradient(ellipse 900px 620px at 96% 104%, rgba(60,110,175,0.14), rgba(0,0,0,0) 66%); }
+  .glow-a { background: radial-gradient(ellipse 65% 76% at 20% 6%, rgba(74,124,190,0.17), rgba(0,0,0,0) 66%); }
+  .glow-b { background: radial-gradient(ellipse 47% 57% at 96% 104%, rgba(60,110,175,0.14), rgba(0,0,0,0) 66%); }
   .net { width: 100%; height: 100%; opacity: 0.6; }
 
   .head { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 26px; }
@@ -122,7 +129,11 @@
     .fan { animation: none; }
   }
   @media (max-width: 900px) {
-    .stage { padding: 48px 28px 52px; gap: 26px; }
+    .screen { display: block; height: auto; }
+    .stage {
+      width: 100%; height: auto; min-height: 100vh; transform: none;
+      justify-content: flex-start; padding: 48px 28px 52px; gap: 26px;
+    }
     .h1 { font-size: 44px; }
     .pill { font-size: 17px; padding: 12px 26px; }
     .fig { font-size: 46px; }
@@ -130,7 +141,7 @@
 </style>
 </head>
 <body>
-<div class="stage">
+<div class="screen">
   <div class="glow glow-a"></div>
   <div class="glow glow-b"></div>
   <svg class="net" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
@@ -145,6 +156,7 @@
     </g>
   </svg>
 
+  <div class="stage">
   <div class="head">
     <h1 class="h1">Инфраструктура под управлением</h1>
     <div class="pill">Показатели платформы</div>
@@ -184,6 +196,7 @@
       <div class="cast" style="left: 6px; bottom: 5px;"></div>
       <div class="cast" style="right: 6px; bottom: 5px;"></div>
     </div>
+  </div>
   </div>
 </div>
 
@@ -265,13 +278,28 @@
   //   window.addEventListener('message', e => { if (e.data.type === 'croft:height') iframe.style.height = e.data.height + 'px'; });
   function postHeight() {
     if (window.parent === window) return;
-    var h = document.querySelector('.stage').scrollHeight;
+    var h = window.innerWidth <= 900
+      ? document.querySelector('.stage').scrollHeight
+      : Math.round(window.innerHeight);
     window.parent.postMessage({ type: 'croft:height', height: h }, '*');
   }
 
-  window.addEventListener('load', function () { countUp(); postHeight(); });
-  window.addEventListener('resize', postHeight);
-  if (document.readyState === 'complete') { countUp(); postHeight(); }
+  // Proportional fit: the composition is drawn on a fixed 1920x1080 artboard and
+  // scaled by the smaller of the two viewport ratios, so it keeps its proportions
+  // on any screen. Below 900px the artboard is dropped for the fluid mobile flow.
+  var BASE_W = 1920, BASE_H = 1080, MIN_S = 0.4, MAX_S = 1.5;
+  var stageEl = document.querySelector('.stage');
+  function fit() {
+    if (window.innerWidth <= 900) { stageEl.style.removeProperty('--s'); return; }
+    var s = Math.min(window.innerWidth / BASE_W, window.innerHeight / BASE_H);
+    s = Math.max(MIN_S, Math.min(MAX_S, s));
+    stageEl.style.setProperty('--s', s.toFixed(4));
+  }
+
+  fit();
+  window.addEventListener('load', function () { fit(); countUp(); postHeight(); });
+  window.addEventListener('resize', function () { fit(); postHeight(); });
+  if (document.readyState === 'complete') { fit(); countUp(); postHeight(); }
 })();
 </script>
 </body>
