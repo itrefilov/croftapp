@@ -26,19 +26,22 @@
   .screen{position:relative;width:100%;height:100vh;min-height:100vh;overflow:hidden;
     display:flex;align-items:center;justify-content:center;
     background:
-      radial-gradient(ellipse 55% 26% at 20% 14%, rgba(74,124,190,.16), rgba(0,0,0,0) 68%),
-      radial-gradient(ellipse 46% 22% at 96% 44%, rgba(60,110,175,.15), rgba(0,0,0,0) 68%),
-      radial-gradient(ellipse 52% 24% at 8% 74%, rgba(74,124,190,.13), rgba(0,0,0,0) 68%),
-      linear-gradient(180deg, #080D10 0%, #0C1727 11%, #0F1F35 24%, #0F1F35 100%);
-    background-size: 100% 200vh;
-    background-repeat: no-repeat;
+      radial-gradient(ellipse 55% 9.2% at 20% 5.0%, rgba(74,124,190,.16), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 46% 7.9% at 96% 15.6%, rgba(60,110,175,.15), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 52% 8.5% at 8% 26.3%, rgba(74,124,190,.13), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 50% 8.5% at 92% 42.7%, rgba(60,110,175,.14), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 54% 9.2% at 14% 59.7%, rgba(74,124,190,.13), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 50% 8.5% at 90% 78.7%, rgba(60,110,175,.14), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 56% 9.2% at 50% 93.1%, rgba(74,124,190,.15), rgba(0,0,0,0) 68%),
+      linear-gradient(180deg, #080D10 0%, #0C1727 3.9%, #0F1F35 8.5%, #0F1F35 100%);
+    background-size:100% 495vh;background-repeat:no-repeat;
     background-position: 0 -100vh;
   }
-  .stage{position:relative;flex:none;width:1920px;height:1080px;padding:20px 96px 142px;
+  .stage{position:relative;flex:none;width:1920px;height:950px;padding:46px 96px 36px;
     display:flex;flex-direction:column;justify-content:center;gap:40px;
     transform:scale(var(--s,1));transform-origin:center center}
 
-  .net{position:absolute;left:0;width:100%;height:200vh;opacity:.6;pointer-events:none}
+  .net{position:absolute;left:0;top:-100vh;width:100%;height:495vh;opacity:.6;pointer-events:none}
 
   .head{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:26px}
   .h1{font-weight:600;font-size:72px;line-height:1.06;letter-spacing:-.02em;margin:0;color:var(--lite)}
@@ -150,12 +153,17 @@
 </head>
 <body>
 <div class="screen">
-  <svg class="net" style="top:-100vh" viewBox="0 0 1920 2160" preserveAspectRatio="none" aria-hidden="true">
+  <svg class="net" style="top:-100vh" viewBox="0 0 1920 4320" preserveAspectRatio="none" aria-hidden="true">
     <path d="M340 210 L520 300 L470 690 L860 1010 L1330 1290 L1760 980 L1920 830" fill="none" stroke="rgba(163,205,255,0.17)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
     <path d="M1330 1290 L1830 1470 L1520 1900 L1010 2010 L560 1780 L240 2090" fill="none" stroke="rgba(163,205,255,0.17)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
     <path d="M1760 180 L1420 560 L1830 1470" fill="none" stroke="rgba(163,205,255,0.13)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
     <path d="M860 1010 L1010 2010" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
     <path d="M470 690 L140 950 L300 1520" fill="none" stroke="rgba(163,205,255,0.13)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M240 2090 L700 2360 L520 2820 L1120 3050" fill="none" stroke="rgba(163,205,255,0.17)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M1010 2010 L1560 2280 L1840 2760 L1380 3120 L1620 3560" fill="none" stroke="rgba(163,205,255,0.15)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M1120 3050 L780 3420 L1010 3880 L1520 4060" fill="none" stroke="rgba(163,205,255,0.15)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M520 2820 L180 3260 L420 3720" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M1380 3120 L1860 3400" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
     <g fill="rgba(140,198,255,0.45)">
       <circle cx="340" cy="210" r="3"></circle><circle cx="520" cy="300" r="2.5"></circle>
       <circle cx="470" cy="690" r="3"></circle><circle cx="1420" cy="560" r="2.5"></circle>
@@ -164,6 +172,11 @@
       <circle cx="300" cy="1520" r="2.5"></circle><circle cx="1830" cy="1470" r="3"></circle>
       <circle cx="560" cy="1780" r="2.5"></circle><circle cx="1520" cy="1900" r="3"></circle>
       <circle cx="1010" cy="2010" r="3"></circle><circle cx="240" cy="2090" r="2.5"></circle>
+      <circle cx="700" cy="2360" r="2.5"></circle><circle cx="1560" cy="2280" r="3"></circle>
+      <circle cx="520" cy="2820" r="3"></circle><circle cx="1840" cy="2760" r="2.5"></circle>
+      <circle cx="1120" cy="3050" r="3"></circle><circle cx="1380" cy="3120" r="2.5"></circle>
+      <circle cx="180" cy="3260" r="2.5"></circle><circle cx="780" cy="3420" r="3"></circle>
+      <circle cx="1620" cy="3560" r="2.5"></circle><circle cx="1010" cy="3880" r="3"></circle>
     </g>
   </svg>
 
@@ -265,8 +278,24 @@
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ---------- масштабирование холста ---------- */
-  var BASE_W=1920, BASE_H=1080, MIN_S=0.4, MAX_S=1.5;
+  var BASE_W=1920, BASE_H=950, MIN_S=0.4, MAX_S=1.5;
   var stageEl=document.querySelector('.stage');
+  /* общее фоновое поле: считается в пикселях от реальной высоты окна */
+  var LAYOUT=[100,100,88,77,87,75,68], IDX=2;
+  function field(){
+    var sc=document.querySelector('.screen'), nt=document.querySelector('.net');
+    if(window.innerWidth<=900){
+      sc.style.backgroundSize='100% 100%'; sc.style.backgroundPosition='0 0';
+      nt.style.height='100%'; nt.style.top='0'; return;
+    }
+    var pageVH=window.innerHeight/(LAYOUT[IDX]/100), total=0, before=0;
+    for(var i=1;i<LAYOUT.length;i++){ total+=LAYOUT[i]; if(i<IDX) before+=LAYOUT[i]; }
+    var f=Math.round(total/100*pageVH), o=Math.round(before/100*pageVH);
+    sc.style.backgroundSize='100% '+f+'px';
+    sc.style.backgroundPosition='0 -'+o+'px';
+    nt.style.height=f+'px'; nt.style.top=(-o)+'px';
+  }
+
   function fit(){
     if(window.innerWidth<=900){ stageEl.style.removeProperty('--s'); return; }
     var s=Math.min(window.innerWidth/BASE_W, window.innerHeight/BASE_H);
@@ -387,9 +416,9 @@
     sheetReady.classList.add('on');
   }
 
-  fit(); postHeight();
+  field(); fit(); postHeight();
   if(reduce) staticState(); else requestAnimationFrame(loop);
-  window.addEventListener('resize', function(){ fit(); postHeight(); });
+  window.addEventListener('resize', function(){ field(); fit(); postHeight(); });
   window.addEventListener('load', function(){ fit(); postHeight(); });
   window.addEventListener('message', function(e){
     if(e.data && e.data.type==='croft:start'){ t0=null; }
