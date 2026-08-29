@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CROFT — система управления оборудованием для майнинга</title>
+<style>
+  @font-face{font-family:"Tilda Sans";font-weight:300;font-display:swap;
+    src:url("https://db.onlinewebfonts.com/t/78ef8357d99ff7635b5d6bcc5896ea5f.woff2") format("woff2")}
+  @font-face{font-family:"Tilda Sans";font-weight:600;font-display:swap;
+    src:url("https://db.onlinewebfonts.com/t/207d85b8fdcba877dad19498bc1023a3.woff2") format("woff2")}
+
+  /* ================================================================
+     CROFT — первый экран, мобильная версия.
+
+     Десктопный croft-hero-embed.html — скомпилированный бандл на 1,25 МБ,
+     нарисованный на холсте 1920x1080 и вписываемый по принципу cover.
+     На телефоне это значило: радар с центром в точке (1548, 596) уезжал
+     за правый край, подзаголовок обрезался на «оборудо…», а из всей сцены
+     оставался пустой левый угол. Здесь та же композиция пересобрана под
+     вертикальный кадр.
+
+     Что сохранено: почти чёрный фон, акцент #4FC7EE, точечное поле двумя
+     слоями, радарный луч с фосфорным следом, узлы, которые зажигаются при
+     проходе луча и рассылают импульсы по связям, кольца дальности,
+     12-секундная петля без стыка.
+
+     Что изменено осознанно:
+     — курсорный сканер убран: на тач-экране его нечем вызвать, а он
+       заставлял пересчитывать маски на каждом движении;
+     — сцена рисуется в canvas с разрешением 0.8 от плотности экрана.
+       Полноэкранный conic-gradient, который поворачивают трансформом,
+       на телефоне стоит десятки мегабайт текстуры; здесь весь кадр —
+       около сорока примитивов в буфере 0.8x, это единицы миллисекунд.
+     ================================================================ */
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;background:#070a0c}
+  body{overflow:hidden;-webkit-text-size-adjust:100%;
+    font-family:"Tilda Sans","Helvetica Neue",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;color:#EEF5F1}
+
+  .hero{position:relative;width:100%;height:100%;overflow:hidden;background:#070a0c}
+
+  /* --- точечное поле: два слоя, статичные, поверх рисует canvas --- */
+  .dots{position:absolute;inset:0;pointer-events:none;
+    background-image:
+      radial-gradient(circle 1px at 1px 1px, rgba(159,232,198,.115) 0 1px, rgba(0,0,0,0) 1.7px),
+      radial-gradient(circle 1.6px at 1.6px 1.6px, rgba(159,232,198,.065) 0 1.6px, rgba(0,0,0,0) 2.3px);
+    background-size:46px 46px, 138px 138px}
+
+  /* --- рассеянный свет: у радара и в противоположном углу --- */
+  .amb{position:absolute;inset:0;pointer-events:none}
+
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #cvs{z-index:0}
+  #cv{z-index:1}
+
+  /* --- виньетка и подложка под текст --- */
+  .vign{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse 128% 118% at 50% 44%, rgba(0,0,0,0) 36%, rgba(0,0,0,.5) 100%)}
+  .grain{position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background-image:repeating-linear-gradient(122deg, rgba(255,255,255,.014) 0 1px, rgba(0,0,0,0) 1px 4px)}
+
+  /* --- типографика --- */
+  .type{position:absolute;left:0;right:0;bottom:21.5%;padding:0 26px;pointer-events:none}
+  .type::before{content:"";position:absolute;left:-14%;right:-14%;top:-58%;bottom:-70%;
+    background:radial-gradient(ellipse 62% 58% at 42% 52%, rgba(7,10,12,.62), rgba(0,0,0,0) 72%);
+    z-index:-1}
+  h1{margin:0;font-weight:600;font-size:clamp(54px,17.4vw,92px);line-height:.98;
+    letter-spacing:-.005em;color:#EEF5F1}
+  .sub{margin:18px 0 0;font-weight:300;font-size:clamp(15px,4.25vw,21px);line-height:1.5;
+    letter-spacing:.01em;color:rgba(220,233,226,.66);max-width:15.5em;text-wrap:pretty}
+
+  /* --- подсказка «страница продолжается» ---
+     На стыке первого и второго экранов аудит отмечал провал: снизу нет
+     ничего, что показывало бы, что дальше есть страница. Тонкая линия
+     с бегущей точкой — из того же телеметрического словаря. */
+  .cue{position:absolute;left:50%;bottom:26px;width:1px;height:46px;margin-left:-.5px;z-index:3;
+    background:linear-gradient(180deg, rgba(200,225,235,0) 0%, rgba(200,225,235,.3) 40%, rgba(200,225,235,0) 100%);
+    overflow:hidden;pointer-events:none}
+  .cue i{position:absolute;left:-1px;width:3px;height:9px;border-radius:2px;
+    background:#4FC7EE;box-shadow:0 0 8px rgba(79,199,238,.9);
+    animation:drop 2.6s cubic-bezier(.55,0,.45,1) infinite}
+  @keyframes drop{
+    0%{transform:translateY(-12px);opacity:0}
+    22%{opacity:1}
+    78%{opacity:1}
+    100%{transform:translateY(46px);opacity:0}}
+
+  /* --- сход ко второму экрану ---
+     Второй экран начинается ровным #0F1F35. Здесь фон приходит к тому же
+     цвету на последних процентах кадра, поэтому стык не виден. */
+  .fade{position:absolute;left:0;right:0;bottom:0;height:23%;pointer-events:none;
+    background:linear-gradient(180deg, rgba(15,31,53,0) 0%, rgba(15,31,53,.28) 40%,
+      rgba(15,31,53,.72) 74%, #0F1F35 96%)}
+
+  @media (prefers-reduced-motion: reduce){
+    .cue i{animation:none;opacity:.9;transform:translateY(16px)}
+  }
+</style>
+</head>
+<body>
+<div class="hero" id="hero">
+  <div class="dots"></div>
+  <div class="amb" id="amb"></div>
+  <canvas id="cvs"></canvas>
+  <canvas id="cv"></canvas>
+  <div class="vign"></div>
+  <div class="grain"></div>
+
+  <div class="type">
+    <h1>CROFT</h1>
+    <p class="sub">Система управления оборудованием для майнинга</p>
+  </div>
+
+  <div class="cue" aria-hidden="true"><i></i></div>
+  <div class="fade"></div>
+</div>
+
+<script>
+(function(){
+  var ACC='79,199,238';                  /* #4FC7EE */
+  var LOOP=12;                           /* секунд на оборот, как на десктопе */
+  /* Слабые аппараты рисуют реже и мельче. Радарный скан — фон, а не
+     содержание: 20 кадров в секунду на нём не читаются как рывки,
+     зато прокрутка первого экрана остаётся гладкой. */
+  var LOWEND = (navigator.hardwareConcurrency || 8) <= 4 ||
+               (navigator.deviceMemory || 8) <= 4;
+  var FPS  = LOWEND ? 20 : 30;
+  var QUAL = LOWEND ? 0.55 : 0.7;
+  var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var cv=document.getElementById('cv'),   ctx=cv.getContext('2d');
+  var cvs=document.getElementById('cvs'), sx=cvs.getContext('2d');
+  var W=0,H=0,DPR=1,O={x:0,y:0},D=0,RS=0;
+  var fan=null, FQ=0.55;                  /* веер печётся в половинном разрешении */
+  var DOTS=[], NODES=[];
+
+  /* Узлы заданы в долях кадра, а не в пикселях: композиция одинаково
+     ложится и на 360x780, и на 430x932. Нижняя левая четверть оставлена
+     пустой — там лежит заголовок. */
+  var NPTS=[
+    [0.17,0.075],[0.62,0.045],[0.92,0.145],[0.40,0.20],[0.80,0.315],
+    [0.13,0.30],[0.58,0.415],[0.93,0.505],[0.30,0.545],[0.72,0.66],
+    [0.06,0.62],[0.90,0.84],[0.46,0.78],[0.80,0.925]
+  ];
+  var LINKS=[[0,1],[1,2],[1,3],[3,5],[2,4],[4,6],[3,6],[6,7],[5,8],[8,6],
+             [7,9],[9,11],[5,10],[8,10],[4,7],[9,12],[12,10],[11,13],[12,13]];
+
+  function past(beam,a){ return ((beam-a)%360+360)%360; }
+  function flash(d){ return d<5 ? (function(t){return t*(2-t);})(d/5) : Math.exp(-(d-5)/32); }
+
+  /* ---------- веер печётся один раз ----------
+     Раньше след луча собирался каждый кадр из 96 секторных заливок
+     во весь экран: на среднем Android это давало 12 кадров в секунду.
+     Форма следа в системе координат луча не меняется — меняется только
+     угол. Поэтому веер рисуется один раз в отдельный буфер, а в кадре
+     остаётся один поворот и одна отрисовка картинки. */
+  function bakeFan(){
+    var S=Math.max(2, Math.round(2*RS*FQ));
+    fan=document.createElement('canvas'); fan.width=S; fan.height=S;
+    var f=fan.getContext('2d'), c=S/2, R=S/2;
+
+    var SPAN=96*Math.PI/180, SLICES=48;
+    var g=f.createRadialGradient(c,c,0,c,c,R);
+    g.addColorStop(0,'rgba('+ACC+',.95)');
+    g.addColorStop(0.30,'rgba('+ACC+',.70)');
+    g.addColorStop(0.68,'rgba('+ACC+',.32)');
+    g.addColorStop(1,'rgba('+ACC+',0)');
+    f.fillStyle=g;
+    /* луч смотрит в +X буфера; секторы кладутся встык в режиме сложения,
+       поэтому на общей границе сглаживание даёт ровно единицу и полос
+       на швах не остаётся */
+    f.globalCompositeOperation='lighter';
+    for(var q=0;q<SLICES;q++){
+      var u0=q/SLICES, u1=(q+1)/SLICES, e0=Math.pow(u0,1.7);
+      f.globalAlpha=0.115*e0;
+      f.beginPath(); f.moveTo(c,c); f.arc(c,c,R, -SPAN*(1-u0), -SPAN*(1-u1)); f.closePath(); f.fill();
+      f.globalAlpha=0.050*e0;
+      f.beginPath(); f.moveTo(c,c); f.arc(c,c,R, Math.PI-SPAN*(1-u0), Math.PI-SPAN*(1-u1)); f.closePath(); f.fill();
+    }
+    /* бегущее пятно на конце луча — за него цепляется глаз */
+    [[1,0.10],[-1,0.040]].forEach(function(pr){
+      var hx=c+R*0.60*pr[0], hr=R*0.32;
+      var hg=f.createRadialGradient(hx,c,0,hx,c,hr);
+      hg.addColorStop(0,'rgba('+ACC+','+pr[1]+')');
+      hg.addColorStop(1,'rgba('+ACC+',0)');
+      f.globalAlpha=1; f.fillStyle=hg;
+      f.beginPath(); f.arc(hx,c,hr,0,6.2832); f.fill();
+    });
+    f.globalAlpha=1; f.globalCompositeOperation='source-over';
+  }
+
+  /* ---------- неподвижный слой: кольца и засечки ---------- */
+  function bakeStatic(){
+    sx.setTransform(DPR,0,0,DPR,0,0);
+    sx.clearRect(0,0,W,H);
+    var RR=[0.105,0.195,0.295,0.405,0.525,0.655];
+    for(var k=0;k<RR.length;k++){
+      sx.beginPath(); sx.arc(O.x,O.y,D*RR[k],0,6.2832);
+      sx.strokeStyle='rgba('+ACC+','+(k%2?0.045:0.082)+')'; sx.lineWidth=1; sx.stroke();
+    }
+    sx.strokeStyle='rgba('+ACC+',.11)'; sx.lineWidth=1.4;
+    for(var t=0;t<12;t++){
+      var a=t*30*Math.PI/180, r0=D*0.585, r1=D*0.605;
+      sx.beginPath();
+      sx.moveTo(O.x+Math.cos(a)*r0, O.y+Math.sin(a)*r0);
+      sx.lineTo(O.x+Math.cos(a)*r1, O.y+Math.sin(a)*r1);
+      sx.stroke();
+    }
+  }
+
+  function layout(){
+    var r=cv.getBoundingClientRect();
+    W=Math.max(1,Math.round(r.width)); H=Math.max(1,Math.round(r.height));
+    /* доля от плотности экрана, но не выше 2: сцена собрана из мягких
+       градиентов, понижение по ней не читается, а закрашивать и
+       выкладывать приходится вчетверо меньше пикселей, чем при DPR 3.
+       Текст и точечное поле лежат отдельными слоями и остаются чёткими. */
+    DPR=Math.min(window.devicePixelRatio||1, 2)*QUAL;
+    [cv,cvs].forEach(function(c){ c.width=Math.round(W*DPR); c.height=Math.round(H*DPR); });
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+
+    /* центр радара — в правой верхней четверти: луч успевает пересечь
+       весь кадр, а заголовок внизу слева не попадает под яркую фазу */
+    O.x=W*0.74; O.y=H*0.235;
+    D=Math.sqrt(W*W+H*H); RS=D*0.60;
+
+    NODES=NPTS.map(function(p,i){
+      var x=p[0]*W, y=p[1]*H, dx=x-O.x, dy=y-O.y;
+      return {x:x, y:y, ang:(Math.atan2(dy,dx)*180/Math.PI+360)%360, r:(i%3===0?3.4:2.6)};
+    });
+
+    /* координаты, угол и удалённость точек поля считаются один раз */
+    DOTS=[];
+    var GAP=46;
+    for(var gy=GAP;gy<H+GAP;gy+=GAP) for(var gx=GAP;gx<W+GAP;gx+=GAP){
+      var dx=gx-O.x, dy=gy-O.y, dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist>RS) continue;
+      DOTS.push({x:gx, y:gy, a:(Math.atan2(dy,dx)*180/Math.PI+360)%360, f:1-dist/RS});
+    }
+
+    bakeFan(); bakeStatic();
+
+    document.getElementById('amb').style.background =
+      'radial-gradient(circle '+Math.round(D*0.62)+'px at '+Math.round(O.x)+'px '+Math.round(O.y)+'px,'
+      + ' rgba('+ACC+',.070), rgba(0,0,0,0) 70%),'
+      + 'radial-gradient(circle '+Math.round(D*0.42)+'px at '+Math.round(W*0.04)+'px '+Math.round(H*0.97)+'px,'
+      + ' rgba('+ACC+',.034), rgba(0,0,0,0) 70%)';
+  }
+
+  function draw(T){
+    var beam=(208+360*(T/LOOP))%360, br=beam*Math.PI/180;
+    var cosb=Math.cos(br), sinb=Math.sin(br);
+    ctx.clearRect(0,0,W,H);
+
+    /* --- след луча: один поворот и одна картинка --- */
+    ctx.save();
+    ctx.translate(O.x,O.y); ctx.rotate(br);
+    ctx.drawImage(fan, -RS, -RS, RS*2, RS*2);
+    ctx.restore();
+
+    /* --- точки поля, зажжённые под лучом --- */
+    ctx.fillStyle='rgba(159,232,198,1)';
+    for(var i=0;i<DOTS.length;i++){
+      var d=DOTS[i], da=past(beam,d.a);
+      var lit = da<3 ? 1 : Math.exp(-(da-3)/26);
+      if(lit<0.05) continue;
+      ctx.globalAlpha=Math.min(0.62, lit*d.f*0.72);
+      ctx.beginPath(); ctx.arc(d.x,d.y,1.25,0,6.2832); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+
+    /* --- линия луча --- */
+    var lg=ctx.createLinearGradient(O.x-cosb*D, O.y-sinb*D, O.x+cosb*D, O.y+sinb*D);
+    lg.addColorStop(0,'rgba('+ACC+',0)');
+    lg.addColorStop(0.42,'rgba('+ACC+',.10)');
+    lg.addColorStop(0.5,'rgba('+ACC+',.30)');
+    lg.addColorStop(0.74,'rgba('+ACC+',.12)');
+    lg.addColorStop(1,'rgba('+ACC+',0)');
+    ctx.strokeStyle=lg; ctx.lineWidth=1.1;
+    ctx.beginPath();
+    ctx.moveTo(O.x-cosb*D*0.62, O.y-sinb*D*0.62);
+    ctx.lineTo(O.x+cosb*D*0.62, O.y+sinb*D*0.62);
+    ctx.stroke();
+
+    /* --- зажигание узлов --- */
+    var ign=NODES.map(function(n){
+      var d1=past(beam,n.ang), d2=past(beam+180,n.ang);
+      var dm=Math.min(d1,d2), s=d1<=d2?1:0.5;
+      return {d:dm, s:s, f:flash(dm)*s};
+    });
+
+    /* --- связи --- */
+    ctx.lineWidth=1;
+    for(var l=0;l<LINKS.length;l++){
+      var A=NODES[LINKS[l][0]], B=NODES[LINKS[l][1]];
+      var lit2=Math.max(ign[LINKS[l][0]].f, ign[LINKS[l][1]].f);
+      ctx.strokeStyle='rgba('+ACC+','+(0.070+0.16*lit2).toFixed(3)+')';
+      ctx.beginPath(); ctx.moveTo(A.x,A.y); ctx.lineTo(B.x,B.y); ctx.stroke();
+    }
+
+    /* --- импульсы: каждый зажжённый узел отправляет один по своим связям --- */
+    for(var p2=0;p2<LINKS.length;p2++){
+      var g2=ign[LINKS[p2][0]], ph=g2.d/62;
+      if(ph>=1) continue;
+      var e=1-(1-ph)*(1-ph);
+      var A2=NODES[LINKS[p2][0]], B2=NODES[LINKS[p2][1]];
+      var px=A2.x+(B2.x-A2.x)*e, py=A2.y+(B2.y-A2.y)*e;
+      var t0=Math.max(0,e-0.14), o=(1-ph)*0.8*g2.s;
+      ctx.strokeStyle='rgba('+ACC+','+(o*0.45).toFixed(3)+')'; ctx.lineWidth=1.6;
+      ctx.beginPath();
+      ctx.moveTo(A2.x+(B2.x-A2.x)*t0, A2.y+(B2.y-A2.y)*t0);
+      ctx.lineTo(px,py); ctx.stroke();
+      ctx.fillStyle='rgba('+ACC+','+o.toFixed(3)+')';
+      ctx.beginPath(); ctx.arc(px,py,2.3,0,6.2832); ctx.fill();
+    }
+
+    /* --- сами узлы: круговая волна, ореол, обводка, ядро --- */
+    for(var n2=0;n2<NODES.length;n2++){
+      var N=NODES[n2], f=ign[n2].f, dd=ign[n2].d;
+      if(dd<74){
+        ctx.strokeStyle='rgba('+ACC+','+(Math.pow(1-dd/74,1.7)*0.40*ign[n2].s).toFixed(3)+')';
+        ctx.lineWidth=1.2;
+        ctx.beginPath(); ctx.arc(N.x,N.y,6+(dd/74)*(D*0.115),0,6.2832); ctx.stroke();
+      }
+      if(f>0.03){
+        var gr=ctx.createRadialGradient(N.x,N.y,0,N.x,N.y,N.r*5.2);
+        gr.addColorStop(0,'rgba('+ACC+','+(0.5*f).toFixed(3)+')');
+        gr.addColorStop(1,'rgba('+ACC+',0)');
+        ctx.fillStyle=gr;
+        ctx.beginPath(); ctx.arc(N.x,N.y,N.r*5.2,0,6.2832); ctx.fill();
+      }
+      ctx.strokeStyle='rgba('+ACC+','+(0.17+0.72*f).toFixed(3)+')'; ctx.lineWidth=1.3;
+      ctx.beginPath(); ctx.arc(N.x,N.y,N.r,0,6.2832); ctx.stroke();
+      ctx.fillStyle='rgba('+ACC+','+(0.22+0.78*f).toFixed(3)+')';
+      ctx.beginPath(); ctx.arc(N.x,N.y,N.r*0.42,0,6.2832); ctx.fill();
+    }
+  }
+
+  var raf=0, t0=null, prev=0, paused=false, STEP=1000/FPS;
+  function loop(now){
+    raf=0;
+    if(t0===null){ t0=now; prev=-1e9; }
+    if(now-prev>=STEP){ prev=now; draw(((now-t0)/1000)%LOOP); }
+    if(!paused) raf=requestAnimationFrame(loop);
+  }
+  function start(){ if(!raf && !reduce && !paused) raf=requestAnimationFrame(loop); }
+  function stop(){ if(raf) cancelAnimationFrame(raf); raf=0; }
+
+  var lastW=0, lastH=0;
+  function boot(){
+    layout(); lastW=W; lastH=H;
+    if(reduce){ draw(LOOP*0.32); return; }
+    stop(); t0=null; start();
+  }
+
+  /* точка входа для съёмки кадров и замеров; в работе не используется */
+  window.__croftFrame=function(T){ stop(); draw(T); };
+  boot();
+  window.addEventListener('load', boot);
+  window.addEventListener('resize', function(){
+    /* На телефоне полоса адреса меняет высоту окна при прокрутке.
+       Пересобирать сцену на каждый такой «resize» дорого и заметно,
+       поэтому реагируем только на смену ширины или крупный скачок. */
+    var r=cv.getBoundingClientRect();
+    if(Math.round(r.width)===lastW && Math.abs(Math.round(r.height)-lastH)<120) return;
+    layout(); lastW=W; lastH=H;
+    if(reduce) draw(LOOP*0.32);
+  });
+  document.addEventListener('visibilitychange', function(){
+    paused=document.hidden;
+    if(paused) stop(); else { t0=null; start(); }
+  });
+})();
+</script>
+</body>
+</html>

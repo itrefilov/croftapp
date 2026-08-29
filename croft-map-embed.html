@@ -6,9 +6,11 @@
 <title>CROFT — интерактивная карта контейнера</title>
 <style>
   @font-face{font-family:"Tilda Sans";font-weight:300;font-display:swap;
-    src:url("https://db.onlinewebfonts.com/t/78ef8357d99ff7635b5d6bcc5896ea5f.woff2") format("woff2")}
+    src:url("assets/tilda-sans-300.woff2") format("woff2"),
+         url("https://db.onlinewebfonts.com/t/78ef8357d99ff7635b5d6bcc5896ea5f.woff2") format("woff2")}
   @font-face{font-family:"Tilda Sans";font-weight:600;font-display:swap;
-    src:url("https://db.onlinewebfonts.com/t/207d85b8fdcba877dad19498bc1023a3.woff2") format("woff2")}
+    src:url("assets/tilda-sans-600.woff2") format("woff2"),
+         url("https://db.onlinewebfonts.com/t/207d85b8fdcba877dad19498bc1023a3.woff2") format("woff2")}
 
   :root{--bg:#0F1F35;--lite:#E9F0F8;--sheet:#EDF2F7;--ink:#10314F;--acc:#4FC3F0;
     --dim:rgba(214,228,238,.42);
@@ -120,24 +122,104 @@
     box-shadow:0 0 0 1px rgba(255,255,255,.18)}
 
   @media (prefers-reduced-motion: reduce){ .cell,.tip{transition:none} }
-  @media (max-width:900px){
-    .screen{display:block;height:auto;background:var(--bg)}
-    .stage{width:100%;height:auto;min-height:100vh;transform:none;justify-content:flex-start;
-      padding:48px 24px 56px}
-    .net{height:100%;top:0 !important}
-    .split{grid-template-columns:1fr;gap:36px}
-    .h1{font-size:42px}
-    .pill{font-size:17px;padding:12px 26px}
-    .lede{font-size:16px}
-    .cta{margin-top:30px;font-size:16px;padding:14px 26px;width:100%;justify-content:center}
-    .map{width:100%;padding:20px 16px;border-radius:14px}
-    .legend{width:100%;flex-wrap:wrap;gap:10px 18px;justify-content:flex-start}
-    .halo{display:none}
-    .racks{gap:22px}
-    .grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
-    .cell{height:38px;font-size:11px;border-radius:6px}
-    .rack{flex:1;min-width:0}
+  /* строка разбора — только для телефона, на десктопе работает тултип */
+  .mdet{display:none}
+
+  /* ======================= МОБИЛЬНАЯ ВЁРСТКА =======================
+     Композиция живёт на холсте шириной 390 и масштабируется через
+     transform: scale(--s). Всё ниже написано в координатах этого холста:
+     что видно на 390, то же самое на любом другом телефоне — только
+     крупнее или мельче. Переносов строк, зависящих от ширины, нет,
+     поэтому высота блока предсказуема и равна MLAY[MIDX] * s. */
+  .mnet{display:none}
+  @media (max-width:899px){
+    .net{display:none}
+    .mnet{position:absolute;left:0;width:100%;opacity:.6;pointer-events:none;display:block}
+    .screen{display:block;height:auto;min-height:0;overflow:hidden;
+      background:
+            radial-gradient(ellipse 118% 2.84% at 24% 5.5%, rgba(74,124,190,.17), rgba(0,0,0,0) 70%),
+            radial-gradient(ellipse 104% 2.616% at 88% 15.5%, rgba(60,110,175,.15), rgba(0,0,0,0) 70%),
+            radial-gradient(ellipse 112% 2.766% at 10% 26.5%, rgba(74,124,190,.14), rgba(0,0,0,0) 70%),
+            radial-gradient(ellipse 108% 2.691% at 86% 41.5%, rgba(60,110,175,.15), rgba(0,0,0,0) 70%),
+            radial-gradient(ellipse 116% 2.766% at 18% 57.5%, rgba(74,124,190,.14), rgba(0,0,0,0) 70%),
+            radial-gradient(ellipse 106% 2.691% at 82% 73.5%, rgba(60,110,175,.15), rgba(0,0,0,0) 70%),
+            radial-gradient(ellipse 120% 2.915% at 50% 90.5%, rgba(74,124,190,.16), rgba(0,0,0,0) 70%),
+            linear-gradient(180deg, #0F1F35 0%, #102542 46%, #0F1F35 100%);
+      background-repeat:no-repeat;background-position:0 0}
+    .stage{width:390px;height:auto;min-height:0;flex:none;
+      margin-left:calc(50% - 195px);
+      transform:scale(var(--s,1));transform-origin:top center;
+      -webkit-tap-highlight-color:transparent}
+
+    .stage{padding:46px 26px 56px;justify-content:flex-start}
+    .split{display:flex;flex-direction:column;gap:0;align-items:stretch}
+    .mapcol{order:2;align-items:stretch}
+    .cta{order:3}
+    .head{gap:22px}
+    .h1{font-size:38px;line-height:1.06}
+    .pill{font-size:15px;padding:12px 26px}
+    .lede{font-size:15.5px;line-height:1.55;margin-top:26px}
+
+    .counts{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:30px;margin-bottom:34px}
+    .cnt b{font-size:30px}
+    .cnt span{font-size:10.5px;letter-spacing:.075em;margin-top:8px;color:rgba(220,233,242,.58)}
+
+    /* ---- панель карты ----
+       backdrop-filter на панели высотой в две трети экрана заставляет
+       телефон пересобирать размытый слой на каждом кадре прокрутки.
+       На мобильном стекло собрано из обычной заливки и обводки:
+       над тёмным фоном разница не видна, а прокрутка остаётся ровной. */
+    /* Свечение под панелью без filter:blur — на прокрутке телефон
+       иначе пересобирает размытый слой каждый кадр. Стопы уведены
+       внутрь коробки, иначе на её краю появляется прямая линия. */
+    .halo{display:block;inset:-30px -22px;filter:none;
+      background:
+        radial-gradient(ellipse 44% 21% at 32% 26%, rgba(126,198,255,.34), rgba(0,0,0,0) 70%),
+        radial-gradient(ellipse 40% 19% at 70% 74%, rgba(79,195,240,.24), rgba(0,0,0,0) 72%),
+        radial-gradient(ellipse 58% 30% at 50% 50%, rgba(150,200,255,.13), rgba(0,0,0,0) 74%)}
+    .map{width:100%;padding:16px 14px 18px;border-radius:15px;
+      backdrop-filter:none;-webkit-backdrop-filter:none;
+      background:linear-gradient(148deg, rgba(255,255,255,.155) 0%, rgba(255,255,255,.105) 46%,
+                                 rgba(255,255,255,.135) 100%);
+      border:1px solid rgba(255,255,255,.5);
+      box-shadow:0 18px 46px rgba(4,14,28,.45), inset 0 1px 0 rgba(255,255,255,.26)}
+
+    /* Два стеллажа рядом дали бы ячейку в 35px — под палец мало.
+       На телефоне они идут друг под другом, ячейка 4 в ряд, 73x42. */
+    .racks{flex-direction:column;gap:16px}
+    .rack{width:100%}
+    .rt{font-size:12.5px;margin-bottom:9px;color:rgba(233,240,248,.75)}
+    .grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+    /* 46px по высоте: на 375px это ровно 44 — минимум, который Apple
+       называет комфортным для пальца; на 390 и выше с запасом. */
+    .cell{height:46px;font-size:14px;border-radius:8px;cursor:pointer;
+      transition:transform .22s cubic-bezier(.2,.7,.3,1),box-shadow .22s ease,background-color .5s ease}
+    .cell:hover{transform:none;box-shadow:none}
+    .cell.sel{transform:scale(1.07);z-index:4;
+      box-shadow:0 8px 18px rgba(4,14,28,.5),0 0 0 2px rgba(255,255,255,.9)}
     .tip{display:none}
+
+    /* ---- строка разбора вместо всплывающей подсказки ----
+       Подсказка по наведению на тач-экране не живёт: её нечем вызвать
+       и нечем убрать, а всплывая — закрывает соседние ячейки. Здесь
+       то же содержимое лежит постоянной строкой под картой: высота
+       фиксированная, поэтому блок не дёргается при переборе ячеек. */
+    .mdet{display:flex;flex-direction:column;justify-content:center;gap:4px;
+      height:58px;margin-top:14px;padding:0 15px;border-radius:11px;
+      background:rgba(140,190,240,.08);border:1px solid rgba(140,190,240,.17)}
+    .mdet b{font-weight:600;font-size:14.5px;color:var(--lite);letter-spacing:-.005em}
+    .mdet span{font-weight:300;font-size:12.5px;color:rgba(226,238,248,.62)}
+    .mdet.empty b{font-weight:300;color:rgba(226,238,248,.8)}
+
+    .legend{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:11px 12px;
+      margin-top:18px;justify-content:stretch}
+    .lg{font-size:13px;gap:9px}
+    .lg b{width:13px;height:13px;border-radius:3px}
+
+    .cta{margin-top:32px;font-size:16px;padding:16px 26px;width:100%;justify-content:center}
+    .cta:hover{transform:none;background:var(--lite);
+      box-shadow:0 10px 30px rgba(4,14,28,.32)}
+    .cta:active{background:#FFFFFF;transform:translateY(1px)}
   }
 </style>
 </head>
@@ -170,6 +252,26 @@
     </g>
   </svg>
 
+  <svg class="mnet" viewBox="0 0 390 6689" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M62 -40 L361 153 L150 305 L300 520 L113 688 L347 905 L167 1056 L296 1338 L182 1592 L258 1816 L349 1973 L61 2180 L293 2413 L56 2643 L274 2844 L129 3101 L236 3322 L129 3607 L316 3799 L154 3970 L295 4233 L122 4433 L355 4704 L223 4946 L350 5231 L144 5398 L311 5632 L70 5844 L264 6092 L58 6263 L309 6527 L207 6707" fill="none" stroke="rgba(163,205,255,0.17)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M320 -120 L71 297 L196 583 L231 829 L284 1076 L357 1383 L361 1660 L102 2036 L195 2328 L221 2619 L304 2984 L256 3263 L158 3506 L140 3751 L266 4041 L88 4412 L365 4738 L239 4988 L267 5302 L281 5716 L64 6018 L192 6438 L33 6796" fill="none" stroke="rgba(163,205,255,0.15)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M150 305 L364 477" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M347 905 L26 1006" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M182 1592 L364 1788" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M61 2180 L364 2296" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M274 2844 L26 3026" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M129 3607 L364 3778" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M295 4233 L26 4367" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M223 4946 L26 5054" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M311 5632 L26 5815" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M58 6263 L364 6448" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M361 153 L71 297" fill="none" stroke="rgba(163,205,255,0.11)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M113 688 L231 829" fill="none" stroke="rgba(163,205,255,0.11)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M296 1338 L284 1076" fill="none" stroke="rgba(163,205,255,0.11)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M349 1973 L361 1660" fill="none" stroke="rgba(163,205,255,0.11)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <g fill="rgba(140,198,255,0.45)"><circle cx="361" cy="153" r="2.6"></circle><circle cx="150" cy="305" r="2.6"></circle><circle cx="300" cy="520" r="3.4"></circle><circle cx="113" cy="688" r="2.6"></circle><circle cx="347" cy="905" r="2.6"></circle><circle cx="167" cy="1056" r="3.4"></circle><circle cx="296" cy="1338" r="2.6"></circle><circle cx="182" cy="1592" r="2.6"></circle><circle cx="258" cy="1816" r="3.4"></circle><circle cx="349" cy="1973" r="2.6"></circle><circle cx="61" cy="2180" r="2.6"></circle><circle cx="293" cy="2413" r="3.4"></circle><circle cx="56" cy="2643" r="2.6"></circle><circle cx="274" cy="2844" r="2.6"></circle><circle cx="129" cy="3101" r="3.4"></circle><circle cx="236" cy="3322" r="2.6"></circle><circle cx="129" cy="3607" r="2.6"></circle><circle cx="316" cy="3799" r="3.4"></circle><circle cx="154" cy="3970" r="2.6"></circle><circle cx="295" cy="4233" r="2.6"></circle><circle cx="122" cy="4433" r="3.4"></circle><circle cx="355" cy="4704" r="2.6"></circle><circle cx="223" cy="4946" r="2.6"></circle><circle cx="350" cy="5231" r="3.4"></circle><circle cx="144" cy="5398" r="2.6"></circle><circle cx="311" cy="5632" r="2.6"></circle><circle cx="70" cy="5844" r="3.4"></circle><circle cx="264" cy="6092" r="2.6"></circle><circle cx="58" cy="6263" r="2.6"></circle><circle cx="309" cy="6527" r="3.4"></circle><circle cx="207" cy="6707" r="2.6"></circle><circle cx="71" cy="297" r="3.4"></circle><circle cx="196" cy="583" r="2.6"></circle><circle cx="231" cy="829" r="2.6"></circle><circle cx="284" cy="1076" r="3.4"></circle><circle cx="357" cy="1383" r="2.6"></circle><circle cx="361" cy="1660" r="2.6"></circle><circle cx="102" cy="2036" r="3.4"></circle><circle cx="195" cy="2328" r="2.6"></circle><circle cx="221" cy="2619" r="2.6"></circle><circle cx="304" cy="2984" r="3.4"></circle><circle cx="256" cy="3263" r="2.6"></circle><circle cx="158" cy="3506" r="2.6"></circle><circle cx="140" cy="3751" r="3.4"></circle><circle cx="266" cy="4041" r="2.6"></circle><circle cx="88" cy="4412" r="2.6"></circle><circle cx="365" cy="4738" r="3.4"></circle><circle cx="239" cy="4988" r="2.6"></circle><circle cx="267" cy="5302" r="2.6"></circle><circle cx="281" cy="5716" r="3.4"></circle><circle cx="64" cy="6018" r="2.6"></circle><circle cx="192" cy="6438" r="2.6"></circle><circle cx="364" cy="477" r="2.6"></circle><circle cx="26" cy="1006" r="2.6"></circle><circle cx="364" cy="1788" r="3.4"></circle><circle cx="364" cy="2296" r="2.6"></circle><circle cx="26" cy="3026" r="2.6"></circle><circle cx="364" cy="3778" r="3.4"></circle><circle cx="26" cy="4367" r="2.6"></circle><circle cx="26" cy="5054" r="2.6"></circle><circle cx="26" cy="5815" r="3.4"></circle><circle cx="364" cy="6448" r="2.6"></circle></g>
+  </svg>
+
   <div class="stage">
     <div class="split">
       <div>
@@ -200,6 +302,10 @@
             <div class="tip" id="tip"></div>
           </div>
         </div>
+        <div class="mdet empty" id="mdet" aria-live="polite">
+          <b>Коснитесь любого места</b>
+          <span>покажем модель, мощность и статус</span>
+        </div>
         <div class="legend">
           <div class="lg"><b style="background:var(--work)"></b>в работе</div>
           <div class="lg"><b style="background:var(--sleep)"></b>в режиме сна</div>
@@ -213,6 +319,28 @@
 
 <script>
 (function(){
+  /* ================= мобильный режим =================
+     Композиция живёт на холсте шириной 390 и масштабируется через
+     transform: scale(s), s = clamp(0.82, ширина окна / 390, 1.28).
+     Высота блока на устройстве = MLAY[MIDX] * s — величина, которую
+     каждый из шести файлов вычисляет сам, поэтому общее фоновое поле
+     и сеть сходятся на стыках без обмена сообщениями между iframe. */
+  var MOB=899, MW=390, MS_MIN=0.82, MS_MAX=1.28;
+  var MLAY=[825,1543,1436,1011,1218,656], MIDX=2;
+  function isMob(){ return window.innerWidth<=MOB; }
+  function mscale(){ return Math.max(MS_MIN, Math.min(MS_MAX, window.innerWidth/MW)); }
+  /* Расчётная высота блока — MLAY[MIDX] * s, и в обычной жизни содержимое
+     занимает ровно её. Но если у посетителя включён увеличенный системный
+     шрифт, текст может не поместиться. Тогда блок вырастает по факту,
+     а не обрезает содержимое: небольшой сдвиг фонового поля переносится
+     легче, чем срезанный абзац. Допуск в 4px — чтобы дробные округления
+     не заставляли расти на пиксель на каждом устройстве. */
+  function mBlockH(){
+    var ms=mscale(), base=Math.round(MLAY[MIDX]*ms);
+    var need = stageEl ? Math.ceil(stageEl.scrollHeight*ms) : 0;
+    return need > base + 4 ? need : base;
+  }
+
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   var BASE_W=1920, BASE_H=832, MIN_S=0.4, MAX_S=1.5;
@@ -220,28 +348,49 @@
   /* общее фоновое поле: считается в пикселях от реальной высоты окна */
   var LAYOUT=[100,100,88,77,87,75,68], IDX=3;
   function field(){
-    var sc=document.querySelector('.screen'), nt=document.querySelector('.net');
-    if(window.innerWidth<=900){
-      sc.style.backgroundSize='100% 100%'; sc.style.backgroundPosition='0 0';
-      nt.style.height='100%'; nt.style.top='0'; return;
+    var sc=document.querySelector('.screen'), nt=document.querySelector('.net'),
+        mn=document.querySelector('.mnet'), i, total=0, before=0, f, o;
+    if(isMob()){
+      var ms=mscale();
+      for(i=0;i<MLAY.length;i++){ total+=MLAY[i]; if(i<MIDX) before+=MLAY[i]; }
+      f=Math.round(total*ms); o=Math.round(before*ms);
+      sc.style.backgroundSize='100% '+f+'px';
+      sc.style.backgroundPosition='0 -'+o+'px';
+      if(mn){
+        /* Сеть — часть композиции, поэтому масштабируется тем же
+           коэффициентом и центрируется вместе с холстом. Иначе там,
+           где s упирается в ограничитель (очень узкий экран или
+           альбомная ориентация), горизонтальный масштаб расходится
+           с вертикальным и узлы вытягиваются в овалы. */
+        var nw=Math.round(MW*ms);
+        mn.style.height=f+'px'; mn.style.top=(-o)+'px';
+        mn.style.width=nw+'px'; mn.style.left='50%'; mn.style.marginLeft=(-Math.round(nw/2))+'px';
+      }
+      return;
     }
-    var pageVH=window.innerHeight/(LAYOUT[IDX]/100), total=0, before=0;
-    for(var i=1;i<LAYOUT.length;i++){ total+=LAYOUT[i]; if(i<IDX) before+=LAYOUT[i]; }
-    var f=Math.round(total/100*pageVH), o=Math.round(before/100*pageVH);
+    var pageVH=window.innerHeight/(LAYOUT[IDX]/100);
+    for(i=1;i<LAYOUT.length;i++){ total+=LAYOUT[i]; if(i<IDX) before+=LAYOUT[i]; }
+    f=Math.round(total/100*pageVH); o=Math.round(before/100*pageVH);
     sc.style.backgroundSize='100% '+f+'px';
     sc.style.backgroundPosition='0 -'+o+'px';
     nt.style.height=f+'px'; nt.style.top=(-o)+'px';
   }
 
   function fit(){
-    if(window.innerWidth<=900){ stageEl.style.removeProperty('--s'); return; }
+    if(isMob()){
+      var ms=mscale();
+      stageEl.style.setProperty('--s', ms.toFixed(4));
+      document.querySelector('.screen').style.height=mBlockH()+'px';
+      return;
+    }
+    document.querySelector('.screen').style.removeProperty('height');
     var s=Math.min(window.innerWidth/BASE_W, window.innerHeight/BASE_H);
     stageEl.style.setProperty('--s', Math.max(MIN_S,Math.min(MAX_S,s)).toFixed(4));
   }
   function postHeight(){
     if(window.parent===window) return;
-    var h = window.innerWidth<=900 ? stageEl.scrollHeight : Math.round(window.innerHeight);
-    window.parent.postMessage({type:'croft:height', height:h}, '*');
+    var h = isMob() ? mBlockH() : Math.round(window.innerHeight);
+    window.parent.postMessage({type:'croft:height', height:h, mobile:isMob()}, '*');
   }
 
   /* исходное состояние: два стеллажа по 24 места */
@@ -277,10 +426,26 @@
     }
   });
 
-  /* подсказка по наведению */
+
+  /* ---------- разбор ячейки: наведение на десктопе, нажатие на телефоне ---------- */
+  var mdet=document.getElementById('mdet'), selCell=null;
+  function cellInfo(idx){
+    var st=STATE[idx];
+    return st==='free'
+      ? {t:'№ '+(idx+1), s:'свободное место'}
+      : {t:'№ '+(idx+1)+' · '+MODELS[idx%MODELS.length], s:POWER[st]+' · '+LABEL[st]};
+  }
+  function pick(c){
+    var idx=+c.getAttribute('data-idx'), info=cellInfo(idx);
+    if(selCell) selCell.classList.remove('sel');
+    selCell=c; c.classList.add('sel');
+    if(mdet){ mdet.classList.remove('empty');
+      mdet.innerHTML='<b>'+info.t+'</b><span>'+info.s+'</span>'; }
+  }
   var tip=document.getElementById('tip'), map=document.getElementById('map');
   cells.forEach(function(c){
     c.addEventListener('mouseenter', function(){
+      if(isMob()) return;
       var idx=+c.getAttribute('data-idx'), st=STATE[idx];
       tip.innerHTML = st==='free'
         ? '<b>№ '+(idx+1)+'</b>свободное место'
@@ -290,7 +455,8 @@
       tip.style.top=(cr.top-mr.top-10)+'px';
       tip.classList.add('on');
     });
-    c.addEventListener('mouseleave', function(){ tip.classList.remove('on'); });
+    c.addEventListener('mouseleave', function(){ if(!isMob()) tip.classList.remove('on'); });
+    c.addEventListener('click', function(){ if(isMob()) pick(c); });
   });
 
   /* карта статична: цифры описывают ровно то, что показано на ней */
@@ -304,9 +470,19 @@
 
   field(); fit(); postHeight();
   window.addEventListener('resize', function(){ field(); fit(); postHeight(); });
+  if (document.fonts && document.fonts.ready)
+    document.fonts.ready.then(function(){ fit(); postHeight(); });
   window.addEventListener('load', function(){ fit(); postHeight(); });
 
   /* ---------- кнопка -> попап на родительской странице ---------- */
+  /* На десктопе кнопка стоит в левой колонке рядом с текстом. На телефоне
+     колонки схлопываются в одну, и кнопка оказывалась ВЫШЕ карты — призыв
+     раньше доказательства. Переносим её в конец. */
+  if(isMob()){
+    var splitEl=document.querySelector('.split'), b=document.getElementById('cta');
+    if(splitEl && b) splitEl.appendChild(b);
+  }
+
   var ctaBtn=document.getElementById('cta');
   if(ctaBtn) ctaBtn.addEventListener('click', function(){
     if(window.parent===window) return;
