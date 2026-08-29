@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CROFT — интерактивная карта контейнера</title>
+<style>
+  @font-face{font-family:"Tilda Sans";font-weight:300;font-display:swap;
+    src:url("https://db.onlinewebfonts.com/t/78ef8357d99ff7635b5d6bcc5896ea5f.woff2") format("woff2")}
+  @font-face{font-family:"Tilda Sans";font-weight:600;font-display:swap;
+    src:url("https://db.onlinewebfonts.com/t/207d85b8fdcba877dad19498bc1023a3.woff2") format("woff2")}
+
+  :root{--bg:#0F1F35;--lite:#E9F0F8;--sheet:#EDF2F7;--ink:#10314F;--acc:#4FC3F0;
+    --dim:rgba(214,228,238,.42);
+    --work:#5FB13A;--sleep:#5B9BD5;--off:#E8622A;--free:#D5DBE2}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%}
+  body{background:var(--bg);color:var(--lite);overflow-x:hidden;
+    font-family:"Tilda Sans","Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+
+  .screen{position:relative;width:100%;height:100vh;min-height:100vh;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+    background:
+      radial-gradient(ellipse 55% 9.2% at 20% 5.0%, rgba(74,124,190,.16), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 46% 7.9% at 96% 15.6%, rgba(60,110,175,.15), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 52% 8.5% at 8% 26.3%, rgba(74,124,190,.13), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 50% 8.5% at 92% 42.7%, rgba(60,110,175,.14), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 54% 9.2% at 14% 59.7%, rgba(74,124,190,.13), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 50% 8.5% at 90% 78.7%, rgba(60,110,175,.14), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 56% 9.2% at 50% 93.1%, rgba(74,124,190,.15), rgba(0,0,0,0) 68%),
+      linear-gradient(180deg, #080D10 0%, #0C1727 3.9%, #0F1F35 8.5%, #0F1F35 100%);
+    background-size:100% 495vh;background-repeat:no-repeat;background-position:0 -188vh}
+  .stage{position:relative;flex:none;width:1920px;height:832px;padding:40px 96px 40px;
+    display:flex;flex-direction:column;justify-content:center;
+    transform:scale(var(--s,1));transform-origin:center center}
+  .net{position:absolute;left:0;top:-188vh;width:100%;height:495vh;opacity:.6;pointer-events:none}
+
+  .split{display:grid;grid-template-columns:640px 1fr;gap:100px;align-items:center}
+  .head{display:flex;flex-direction:column;align-items:flex-start;gap:26px}
+  .h1{margin:0;font-weight:600;font-size:72px;line-height:1.06;letter-spacing:-.02em}
+  .pill{display:inline-flex;align-items:center;border:1px solid rgba(232,240,247,.5);border-radius:999px;
+    padding:15px 34px;font-weight:300;font-size:20px;color:#E3EBF3;cursor:default;
+    transition:background-color .25s ease,color .25s ease,border-color .25s ease}
+  .pill:hover{background-color:var(--lite);color:var(--ink);border-color:var(--lite)}
+  .lede{margin:30px 0 0;font-weight:300;font-size:19px;line-height:1.55;color:rgba(226,238,248,.72)}
+
+  /* ---------- кнопка «Записаться на презентацию» ---------- */
+  .cta{display:inline-flex;align-items:center;gap:11px;margin-top:42px;
+    border:0;border-radius:999px;padding:16px 32px;
+    background:var(--lite);color:var(--ink);
+    font-family:inherit;font-weight:600;font-size:17px;line-height:1;cursor:pointer;
+    box-shadow:0 10px 30px rgba(4,14,28,.32);
+    transition:background-color .25s ease,transform .25s cubic-bezier(.2,.7,.3,1),box-shadow .25s ease}
+  .cta:hover{background:#FFFFFF;transform:translateY(-2px);
+    box-shadow:0 16px 40px rgba(4,14,28,.42),0 0 0 1px rgba(79,195,240,.4)}
+  .cta:active{transform:translateY(0)}
+  .cta:focus-visible{outline:2px solid var(--acc);outline-offset:4px}
+  .cta svg{width:19px;height:19px;flex:none;transition:transform .25s ease}
+  .cta:hover svg{transform:translateX(3px)}
+  @media (prefers-reduced-motion: reduce){
+    .cta,.cta svg{transition:none}
+    .cta:hover,.cta:hover svg{transform:none}
+  }
+
+
+  .counts{display:flex;gap:52px;margin-top:38px}
+  .cnt b{display:block;font-weight:600;font-size:38px;line-height:1;letter-spacing:-.02em;
+    color:var(--lite);font-variant-numeric:tabular-nums}
+  .cnt span{display:block;font-weight:300;font-size:13px;letter-spacing:.09em;text-transform:uppercase;
+    color:rgba(220,233,242,.5);margin-top:10px}
+
+  /* ---------- карта ---------- */
+  .mapcol{display:flex;flex-direction:column;align-items:center}
+  .mapwrap{position:relative}
+
+  /* то, что видно СКВОЗЬ стекло: световое пятно и линии, уходящие за края панели */
+  .halo{position:absolute;inset:-58px -70px;z-index:0;pointer-events:none;filter:blur(46px);
+    background:
+      radial-gradient(ellipse 58% 66% at 28% 24%, rgba(126,198,255,.40), rgba(0,0,0,0) 72%),
+      radial-gradient(ellipse 52% 58% at 80% 84%, rgba(79,195,240,.26), rgba(0,0,0,0) 74%),
+      radial-gradient(ellipse 74% 78% at 52% 50%, rgba(150,200,255,.14), rgba(0,0,0,0) 76%)}
+
+  .map{position:relative;z-index:1;width:740px;
+    background:linear-gradient(148deg, rgba(255,255,255,.30) 0%, rgba(255,255,255,.16) 46%,
+                                rgba(255,255,255,.23) 100%);
+    border:1.5px solid rgba(255,255,255,.72);
+    border-radius:20px;padding:30px 32px 30px;
+    backdrop-filter:blur(20px) saturate(1.35) brightness(1.10);
+    -webkit-backdrop-filter:blur(20px) saturate(1.35) brightness(1.10);
+    box-shadow:0 34px 78px rgba(4,14,28,.5),
+               inset 0 1px 0 rgba(255,255,255,.34),
+               inset 0 -1px 0 rgba(255,255,255,.10)}
+  .racks{display:flex;gap:54px}
+  .rack{display:flex;flex-direction:column}
+  .rt{font-weight:300;font-size:14px;color:rgba(233,240,248,.66);margin-bottom:16px;letter-spacing:.02em}
+  .grid{display:grid;grid-template-columns:repeat(4,70px);gap:10px}
+  .cell{height:64px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    font-weight:600;font-size:15px;color:#fff;cursor:default;position:relative;
+    transition:background-color .55s ease,transform .3s cubic-bezier(.2,.7,.3,1),box-shadow .3s ease,color .55s ease}
+  .cell.work{background:var(--work)}
+  .cell.sleep{background:var(--sleep)}
+  .cell.off{background:var(--off)}
+  .cell.free{background:rgba(233,240,248,.18);color:rgba(233,240,248,.6)}
+  .cell:hover{transform:translateY(-4px) scale(1.08);z-index:4;
+    box-shadow:0 12px 26px rgba(4,14,28,.5),0 0 0 2px rgba(255,255,255,.5)}
+
+  .tip{position:absolute;z-index:9;pointer-events:none;background:#0C1A2B;color:var(--lite);
+    border:1px solid rgba(140,190,240,.24);border-radius:8px;padding:9px 12px;white-space:nowrap;
+    font-weight:300;font-size:13px;box-shadow:0 14px 30px rgba(4,14,28,.55);
+    opacity:0;transform:translate(-50%,-6px);transition:opacity .2s ease,transform .2s ease}
+  .tip.on{opacity:1;transform:translate(-50%,-12px)}
+  .tip b{font-weight:600;color:#fff;margin-right:7px}
+  .tip u{text-decoration:none;margin-left:7px}
+
+  .legend{width:740px;display:flex;justify-content:center;align-items:center;gap:42px;
+    margin-top:24px}
+  .lg{display:flex;align-items:center;gap:10px;font-weight:300;font-size:15px;
+    color:rgba(233,240,248,.9)}
+  .lg b{width:15px;height:15px;border-radius:4px;display:block;flex:none;
+    box-shadow:0 0 0 1px rgba(255,255,255,.18)}
+
+  @media (prefers-reduced-motion: reduce){ .cell,.tip{transition:none} }
+  @media (max-width:900px){
+    .screen{display:block;height:auto;background:var(--bg)}
+    .stage{width:100%;height:auto;min-height:100vh;transform:none;justify-content:flex-start;
+      padding:48px 24px 56px}
+    .net{height:100%;top:0 !important}
+    .split{grid-template-columns:1fr;gap:36px}
+    .h1{font-size:42px}
+    .pill{font-size:17px;padding:12px 26px}
+    .lede{font-size:16px}
+    .cta{margin-top:30px;font-size:16px;padding:14px 26px;width:100%;justify-content:center}
+    .map{width:100%;padding:20px 16px;border-radius:14px}
+    .legend{width:100%;flex-wrap:wrap;gap:10px 18px;justify-content:flex-start}
+    .halo{display:none}
+    .racks{gap:22px}
+    .grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+    .cell{height:38px;font-size:11px;border-radius:6px}
+    .rack{flex:1;min-width:0}
+    .tip{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="screen">
+  <svg class="net" viewBox="0 0 1920 4320" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M340 210 L520 300 L470 690 L860 1010 L1330 1290 L1760 980 L1920 830" fill="none" stroke="rgba(163,205,255,0.17)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M1330 1290 L1830 1470 L1520 1900 L1010 2010 L560 1780 L240 2090" fill="none" stroke="rgba(163,205,255,0.17)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M1760 180 L1420 560 L1830 1470" fill="none" stroke="rgba(163,205,255,0.13)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M860 1010 L1010 2010" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M470 690 L140 950 L300 1520" fill="none" stroke="rgba(163,205,255,0.13)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M240 2090 L700 2360 L520 2820 L1120 3050" fill="none" stroke="rgba(163,205,255,0.17)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M1010 2010 L1560 2280 L1840 2760 L1380 3120 L1620 3560" fill="none" stroke="rgba(163,205,255,0.15)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M1120 3050 L780 3420 L1010 3880 L1520 4060" fill="none" stroke="rgba(163,205,255,0.15)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M520 2820 L180 3260 L420 3720" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M1380 3120 L1860 3400" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <g fill="rgba(140,198,255,0.45)">
+      <circle cx="340" cy="210" r="3"></circle><circle cx="520" cy="300" r="2.5"></circle>
+      <circle cx="470" cy="690" r="3"></circle><circle cx="1420" cy="560" r="2.5"></circle>
+      <circle cx="140" cy="950" r="2.5"></circle><circle cx="1760" cy="980" r="3"></circle>
+      <circle cx="860" cy="1010" r="3"></circle><circle cx="1330" cy="1290" r="3"></circle>
+      <circle cx="300" cy="1520" r="2.5"></circle><circle cx="1830" cy="1470" r="3"></circle>
+      <circle cx="560" cy="1780" r="2.5"></circle><circle cx="1520" cy="1900" r="3"></circle>
+      <circle cx="1010" cy="2010" r="3"></circle><circle cx="240" cy="2090" r="2.5"></circle>
+      <circle cx="700" cy="2360" r="2.5"></circle><circle cx="1560" cy="2280" r="3"></circle>
+      <circle cx="520" cy="2820" r="3"></circle><circle cx="1840" cy="2760" r="2.5"></circle>
+      <circle cx="1120" cy="3050" r="3"></circle><circle cx="1380" cy="3120" r="2.5"></circle>
+      <circle cx="180" cy="3260" r="2.5"></circle><circle cx="780" cy="3420" r="3"></circle>
+      <circle cx="1620" cy="3560" r="2.5"></circle><circle cx="1010" cy="3880" r="3"></circle>
+    </g>
+  </svg>
+
+  <div class="stage">
+    <div class="split">
+      <div>
+        <div class="head">
+          <h1 class="h1">Интерактивная карта</h1>
+          <div class="pill">Массовое управление</div>
+        </div>
+        <p class="lede">Каждый контейнер — уникальный шаблон, повторяющий структуру стеллажей и полок в реальности. Видно каждое устройство: что работает, что спит, что отключено и где осталось свободное место.</p>
+        <div class="counts">
+          <div class="cnt"><b id="cAll">48</b><span>всего мест</span></div>
+          <div class="cnt"><b id="cWork">40</b><span>в работе</span></div>
+          <div class="cnt"><b id="cFree">6</b><span>свободно</span></div>
+        </div>
+        <button class="cta" type="button" id="cta">
+          <span>Записаться на презентацию</span>
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 10h12M11 5.5 15.5 10 11 14.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <div class="mapcol">
+        <div class="mapwrap">
+          <div class="halo"></div>
+          <div class="map" id="map">
+            <div class="racks">
+              <div class="rack"><div class="rt">1 стеллаж</div><div class="grid" data-rack="0"></div></div>
+              <div class="rack"><div class="rt">2 стеллаж</div><div class="grid" data-rack="1"></div></div>
+            </div>
+            <div class="tip" id="tip"></div>
+          </div>
+        </div>
+        <div class="legend">
+          <div class="lg"><b style="background:var(--work)"></b>в работе</div>
+          <div class="lg"><b style="background:var(--sleep)"></b>в режиме сна</div>
+          <div class="lg"><b style="background:var(--off)"></b>отключено</div>
+          <div class="lg"><b style="background:rgba(233,240,248,.18)"></b>свободное место</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var BASE_W=1920, BASE_H=832, MIN_S=0.4, MAX_S=1.5;
+  var stageEl=document.querySelector('.stage');
+  /* общее фоновое поле: считается в пикселях от реальной высоты окна */
+  var LAYOUT=[100,100,88,77,87,75,68], IDX=3;
+  function field(){
+    var sc=document.querySelector('.screen'), nt=document.querySelector('.net');
+    if(window.innerWidth<=900){
+      sc.style.backgroundSize='100% 100%'; sc.style.backgroundPosition='0 0';
+      nt.style.height='100%'; nt.style.top='0'; return;
+    }
+    var pageVH=window.innerHeight/(LAYOUT[IDX]/100), total=0, before=0;
+    for(var i=1;i<LAYOUT.length;i++){ total+=LAYOUT[i]; if(i<IDX) before+=LAYOUT[i]; }
+    var f=Math.round(total/100*pageVH), o=Math.round(before/100*pageVH);
+    sc.style.backgroundSize='100% '+f+'px';
+    sc.style.backgroundPosition='0 -'+o+'px';
+    nt.style.height=f+'px'; nt.style.top=(-o)+'px';
+  }
+
+  function fit(){
+    if(window.innerWidth<=900){ stageEl.style.removeProperty('--s'); return; }
+    var s=Math.min(window.innerWidth/BASE_W, window.innerHeight/BASE_H);
+    stageEl.style.setProperty('--s', Math.max(MIN_S,Math.min(MAX_S,s)).toFixed(4));
+  }
+  function postHeight(){
+    if(window.parent===window) return;
+    var h = window.innerWidth<=900 ? stageEl.scrollHeight : Math.round(window.innerHeight);
+    window.parent.postMessage({type:'croft:height', height:h}, '*');
+  }
+
+  /* исходное состояние: два стеллажа по 24 места */
+  var MODELS=['S19 Pro','S19j XP','S21','S21 Hydro','M50S+','M56S'];
+  var STATE={
+    0:'work',  1:'work',  2:'work',  3:'work',
+    4:'work',  5:'sleep', 6:'sleep', 7:'work',
+    8:'work',  9:'work', 10:'work', 11:'work',
+   12:'work', 13:'work', 14:'off',  15:'work',
+   16:'work', 17:'work', 18:'work', 19:'work',
+   20:'work', 21:'work', 22:'free', 23:'free',
+
+   24:'work', 25:'work', 26:'work', 27:'work',
+   28:'work', 29:'work', 30:'work', 31:'work',
+   32:'sleep',33:'sleep',34:'sleep',35:'work',
+   36:'work', 37:'work', 38:'work', 39:'work',
+   40:'work', 41:'work', 42:'work', 43:'work',
+   44:'free', 45:'free', 46:'free', 47:'free'
+  };
+  var LABEL={work:'в работе', sleep:'в режиме сна', off:'отключено', free:'свободное место'};
+  var POWER={work:'3.4 кВт', sleep:'0.2 кВт', off:'0 кВт', free:'—'};
+
+  var cells=[];
+  document.querySelectorAll('[data-rack]').forEach(function(host){
+    var r=+host.getAttribute('data-rack');
+    for(var k=0;k<24;k++){
+      var idx=r*24+k;
+      var d=document.createElement('div');
+      d.className='cell '+STATE[idx];
+      d.textContent=idx+1;
+      d.setAttribute('data-idx', idx);
+      host.appendChild(d); cells.push(d);
+    }
+  });
+
+  /* подсказка по наведению */
+  var tip=document.getElementById('tip'), map=document.getElementById('map');
+  cells.forEach(function(c){
+    c.addEventListener('mouseenter', function(){
+      var idx=+c.getAttribute('data-idx'), st=STATE[idx];
+      tip.innerHTML = st==='free'
+        ? '<b>№ '+(idx+1)+'</b>свободное место'
+        : '<b>№ '+(idx+1)+'</b>'+MODELS[idx%MODELS.length]+'<u>· '+POWER[st]+' · '+LABEL[st]+'</u>';
+      var mr=map.getBoundingClientRect(), cr=c.getBoundingClientRect();
+      tip.style.left=(cr.left-mr.left+cr.width/2)+'px';
+      tip.style.top=(cr.top-mr.top-10)+'px';
+      tip.classList.add('on');
+    });
+    c.addEventListener('mouseleave', function(){ tip.classList.remove('on'); });
+  });
+
+  /* карта статична: цифры описывают ровно то, что показано на ней */
+  (function counts(){
+    var w=0,f=0;
+    for(var k in STATE){ if(STATE[k]==='work') w++; if(STATE[k]==='free') f++; }
+    document.getElementById('cAll').textContent=cells.length;
+    document.getElementById('cWork').textContent=w;
+    document.getElementById('cFree').textContent=f;
+  })();
+
+  field(); fit(); postHeight();
+  window.addEventListener('resize', function(){ field(); fit(); postHeight(); });
+  window.addEventListener('load', function(){ fit(); postHeight(); });
+
+  /* ---------- кнопка -> попап на родительской странице ---------- */
+  var ctaBtn=document.getElementById('cta');
+  if(ctaBtn) ctaBtn.addEventListener('click', function(){
+    if(window.parent===window) return;
+    try{ window.parent.postMessage({type:'croft:cta', form:'demo', screen:'map'}, '*'); }catch(err){}
+  });
+})();
+</script>
+</body>
+</html>

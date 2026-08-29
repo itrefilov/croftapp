@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CROFT — отчёты и выгрузки</title>
+<style>
+  @font-face{font-family:"Tilda Sans";font-weight:300;font-display:swap;
+    src:url("https://db.onlinewebfonts.com/t/78ef8357d99ff7635b5d6bcc5896ea5f.woff2") format("woff2")}
+  @font-face{font-family:"Tilda Sans";font-weight:600;font-display:swap;
+    src:url("https://db.onlinewebfonts.com/t/207d85b8fdcba877dad19498bc1023a3.woff2") format("woff2")}
+
+  :root{--bg:#0F1F35;--lite:#E9F0F8;--sheet:#EDF2F7;--ink:#10314F;--acc:#4FC3F0;
+    --dim:rgba(214,228,238,.42)}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%}
+  body{background:var(--bg);color:var(--lite);overflow-x:hidden;
+    font-family:"Tilda Sans","Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+
+  .screen{position:relative;width:100%;height:100vh;min-height:100vh;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+    background:
+      radial-gradient(ellipse 55% 9.2% at 20% 5.0%, rgba(74,124,190,.16), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 46% 7.9% at 96% 15.6%, rgba(60,110,175,.15), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 52% 8.5% at 8% 26.3%, rgba(74,124,190,.13), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 50% 8.5% at 92% 42.7%, rgba(60,110,175,.14), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 54% 9.2% at 14% 59.7%, rgba(74,124,190,.13), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 50% 8.5% at 90% 78.7%, rgba(60,110,175,.14), rgba(0,0,0,0) 68%),
+      radial-gradient(ellipse 56% 9.2% at 50% 93.1%, rgba(74,124,190,.15), rgba(0,0,0,0) 68%),
+      linear-gradient(180deg, #080D10 0%, #0C1727 3.9%, #0F1F35 8.5%, #0F1F35 100%);
+    background-size:100% 495vh;background-repeat:no-repeat;background-position:0 -352vh}
+  .stage{position:relative;flex:none;width:1920px;height:810px;padding:40px 96px;
+    display:flex;flex-direction:column;justify-content:center;
+    transform:scale(var(--s,1));transform-origin:center center}
+  .net{position:absolute;left:0;top:-352vh;width:100%;height:495vh;opacity:.6;pointer-events:none}
+
+  .split{display:grid;grid-template-columns:520px 1fr;gap:86px;align-items:center}
+  .head{display:flex;flex-direction:column;align-items:flex-start}
+  .h1{margin:0;font-weight:600;font-size:72px;line-height:1.06;letter-spacing:-.02em}
+  .pill{display:inline-flex;align-items:center;border:1px solid rgba(232,240,247,.5);border-radius:999px;
+    padding:15px 34px;font-weight:300;font-size:20px;color:#E3EBF3;cursor:default;margin-top:26px;
+    transition:background-color .25s ease,color .25s ease,border-color .25s ease}
+  .pill:hover{background-color:var(--lite);color:var(--ink);border-color:var(--lite)}
+  .lede{margin:30px 0 0;font-weight:300;font-size:19px;line-height:1.55;color:rgba(226,238,248,.72)}
+
+  .cta{display:inline-flex;align-items:center;gap:11px;margin-top:40px;border:0;border-radius:999px;
+    padding:16px 32px;background:var(--lite);color:var(--ink);font-family:inherit;font-weight:600;
+    font-size:17px;line-height:1;cursor:pointer;box-shadow:0 10px 30px rgba(4,14,28,.32);
+    transition:background-color .25s ease,transform .25s cubic-bezier(.2,.7,.3,1),box-shadow .25s ease}
+  .cta:hover{background:#FFFFFF;transform:translateY(-2px);
+    box-shadow:0 16px 40px rgba(4,14,28,.42),0 0 0 1px rgba(79,195,240,.4)}
+  .cta:active{transform:translateY(0)}
+  .cta:focus-visible{outline:2px solid var(--acc);outline-offset:4px}
+  .cta svg{width:19px;height:19px;flex:none;transition:transform .25s ease}
+  .cta:hover svg{transform:translateX(3px)}
+
+  /* ---------- переключатели ---------- */
+  .tabs{display:flex;gap:8px;margin-bottom:18px}
+  .tab{appearance:none;font-family:inherit;cursor:pointer;
+    border:1px solid rgba(140,190,240,.24);background:rgba(140,190,240,.06);
+    color:rgba(226,238,248,.72);border-radius:10px;padding:13px 20px;
+    font-weight:300;font-size:16px;line-height:1;
+    transition:background-color .3s ease,color .3s ease,border-color .3s ease}
+  .tab:hover{border-color:rgba(140,190,240,.5);color:var(--lite)}
+  .tab.on{background:var(--lite);color:var(--ink);border-color:var(--lite);font-weight:600}
+  .tab:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
+
+  .conts{display:flex;gap:7px;margin-bottom:18px;flex-wrap:wrap}
+  .conts.hide{display:none}
+  .cchip{appearance:none;font-family:inherit;cursor:pointer;white-space:nowrap;
+    border:1px solid rgba(140,190,240,.2);background:rgba(140,190,240,.04);
+    color:rgba(226,238,248,.6);border-radius:8px;padding:9px 14px;
+    font-weight:300;font-size:13.5px;line-height:1;
+    transition:background-color .25s ease,color .25s ease,border-color .25s ease}
+  .cchip:hover{border-color:rgba(140,190,240,.45);color:var(--lite)}
+  .cchip.on{background:rgba(79,195,240,.16);border-color:rgba(79,195,240,.6);
+    color:var(--lite);font-weight:600}
+  .cchip:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
+
+  /* ---------- лист отчёта ---------- */
+  .sheet{background:var(--sheet);border-radius:16px;color:var(--ink);
+    box-shadow:0 36px 80px rgba(4,14,28,.5);overflow:hidden;position:relative;
+    display:flex;flex-direction:column}
+  .sh-top{display:flex;align-items:center;justify-content:space-between;
+    padding:20px 26px;border-bottom:1px solid rgba(16,49,79,.12)}
+  .sh-name{font-weight:600;font-size:17px;letter-spacing:-.01em}
+  .sh-sub{font-weight:300;font-size:13px;color:rgba(16,49,79,.6);margin-top:3px}
+  .sh-mark{display:flex;align-items:center;gap:9px;font-weight:600;font-size:12px;
+    letter-spacing:.14em;color:rgba(16,49,79,.45)}
+  .sh-mark b{display:grid;place-items:center;width:24px;height:24px;border-radius:6px;
+    background:rgba(16,49,79,.1);font-size:11px;letter-spacing:0;color:rgba(16,49,79,.75)}
+  .sh-scroll{overflow-x:auto}
+  .sh-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:14px 26px;border-top:1px solid rgba(16,49,79,.12);
+    font-weight:300;font-size:12.5px;color:rgba(16,49,79,.6)}
+  .chip{display:inline-flex;align-items:center;gap:8px;flex:none;font-weight:600;font-size:12px;
+    color:#1F6B3A;background:rgba(95,177,58,.14);border-radius:7px;padding:7px 12px}
+  .chip b{width:7px;height:7px;border-radius:50%;background:#5FB13A;flex:none}
+
+  table.rep{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  table.rep th{font-weight:600;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+    color:rgba(16,49,79,.5);text-align:right;padding:13px 20px 11px;white-space:nowrap;
+    border-bottom:1px solid rgba(16,49,79,.12)}
+  table.rep th:first-child,table.rep td:first-child,
+  table.rep th:nth-child(2),table.rep td:nth-child(2){text-align:left}
+  table.rep td{font-weight:300;font-size:14px;color:rgba(16,49,79,.86);text-align:right;
+    padding:12px 20px;border-bottom:1px solid rgba(16,49,79,.07);white-space:nowrap}
+  table.rep td:first-child{font-weight:600;color:var(--ink)}
+  table.rep td:nth-child(2){color:rgba(16,49,79,.62)}
+  table.rep tr:last-child td{border-bottom:0}
+  table.rep tr.row{opacity:0;transform:translateY(5px);
+    transition:opacity .38s ease,transform .38s ease}
+  table.rep tr.row.on{opacity:1;transform:none}
+  table.rep.cli th:nth-child(3),table.rep.cli td:nth-child(3),
+  table.rep.cli th:nth-child(4),table.rep.cli td:nth-child(4){text-align:left}
+  table.rep u{font-style:normal;text-decoration:none;font-weight:300;font-size:.8em;
+    color:rgba(16,49,79,.48);margin-left:4px}
+
+  @media (prefers-reduced-motion: reduce){
+    table.rep tr.row,.cta,.cta svg,.tab,.cchip{transition:none}
+    .cta:hover,.cta:hover svg{transform:none}
+  }
+
+  @media (max-width:900px){
+    .screen{display:block;height:auto;background:var(--bg)}
+    .stage{width:100%;height:auto;min-height:100vh;transform:none;justify-content:flex-start;
+      padding:48px 24px 56px}
+    .net{height:100%;top:0 !important}
+    .split{grid-template-columns:1fr;gap:34px}
+    .h1{font-size:42px}
+    .pill{font-size:17px;padding:12px 26px}
+    .lede{font-size:16px}
+    .cta{margin-top:30px;font-size:16px;padding:14px 26px;width:100%;justify-content:center}
+    .tabs{flex-wrap:wrap}
+    .tab{font-size:14px;padding:11px 15px}
+    .cchip{font-size:12.5px;padding:8px 11px}
+    table.rep th{font-size:10px;padding:11px 14px 9px}
+    table.rep td{font-size:12.5px;padding:10px 14px}
+    .sh-foot{flex-direction:column;align-items:flex-start;gap:10px}
+  }
+</style>
+</head>
+<body>
+<div class="screen">
+  <svg class="net" viewBox="0 0 1920 4320" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M340 210 L520 300 L470 690 L860 1010 L1330 1290 L1760 980 L1920 830" fill="none" stroke="rgba(163,205,255,0.17)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M1330 1290 L1830 1470 L1520 1900 L1010 2010 L560 1780 L240 2090" fill="none" stroke="rgba(163,205,255,0.17)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M1760 180 L1420 560 L1830 1470" fill="none" stroke="rgba(163,205,255,0.13)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M860 1010 L1010 2010" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M470 690 L140 950 L300 1520" fill="none" stroke="rgba(163,205,255,0.13)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M240 2090 L700 2360 L520 2820 L1120 3050" fill="none" stroke="rgba(163,205,255,0.17)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M1010 2010 L1560 2280 L1840 2760 L1380 3120 L1620 3560" fill="none" stroke="rgba(163,205,255,0.15)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M1120 3050 L780 3420 L1010 3880 L1520 4060" fill="none" stroke="rgba(163,205,255,0.15)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M520 2820 L180 3260 L420 3720" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <path d="M1380 3120 L1860 3400" fill="none" stroke="rgba(163,205,255,0.12)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+    <g fill="rgba(140,198,255,0.45)">
+      <circle cx="340" cy="210" r="3"></circle><circle cx="520" cy="300" r="2.5"></circle>
+      <circle cx="470" cy="690" r="3"></circle><circle cx="1420" cy="560" r="2.5"></circle>
+      <circle cx="140" cy="950" r="2.5"></circle><circle cx="1760" cy="980" r="3"></circle>
+      <circle cx="860" cy="1010" r="3"></circle><circle cx="1330" cy="1290" r="3"></circle>
+      <circle cx="300" cy="1520" r="2.5"></circle><circle cx="1830" cy="1470" r="3"></circle>
+      <circle cx="560" cy="1780" r="2.5"></circle><circle cx="1520" cy="1900" r="3"></circle>
+      <circle cx="1010" cy="2010" r="3"></circle><circle cx="240" cy="2090" r="2.5"></circle>
+      <circle cx="700" cy="2360" r="2.5"></circle><circle cx="1560" cy="2280" r="3"></circle>
+      <circle cx="520" cy="2820" r="3"></circle><circle cx="1840" cy="2760" r="2.5"></circle>
+      <circle cx="1120" cy="3050" r="3"></circle><circle cx="1380" cy="3120" r="2.5"></circle>
+      <circle cx="180" cy="3260" r="2.5"></circle><circle cx="780" cy="3420" r="3"></circle>
+      <circle cx="1620" cy="3560" r="2.5"></circle><circle cx="1010" cy="3880" r="3"></circle>
+    </g>
+  </svg>
+
+  <div class="stage">
+    <div class="split">
+      <div>
+        <div class="head">
+          <h1 class="h1">Отчёты за<br>любой период</h1>
+          <div class="pill">Управление данными</div>
+        </div>
+        <p class="lede">Ежемесячная отчётность перестаёт быть проблемой: часы работы, потребление и привязка машин к пулам и клиентам уже собраны, остаётся только выгрузить данные в пару кликов. Тот же массив данных показывает и состояние инфраструктуры целиком: где простои, какие асики работали меньше нормы, сколько электроэнергии было потреблено на каждом узле.</p>
+        <button class="cta" type="button" id="cta">
+          <span>Записаться на презентацию</span>
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 10h12M11 5.5 15.5 10 11 14.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <div>
+        <div class="tabs" id="aTabs">
+          <button class="tab on" type="button" data-i="0">По контейнерам</button>
+          <button class="tab" type="button" data-i="1">По клиентам</button>
+        </div>
+        <div class="conts" id="aConts"></div>
+        <div class="sheet" id="aSheet">
+          <div class="sh-top">
+            <div>
+              <div class="sh-name" id="aName">Контейнер 4к 6-7</div>
+              <div class="sh-sub" id="aSub">Ф1 (КТП 2) · 204 устройства · 32,8 ч сред. · 23 610 кВт·ч</div>
+            </div>
+            <div class="sh-mark"><b>C</b>CROFT</div>
+          </div>
+          <div class="sh-scroll">
+            <table class="rep"><thead><tr id="aHead"></tr></thead><tbody id="aBody"></tbody></table>
+          </div>
+          <div class="sh-foot">
+            <span id="aFoot">6 строк из 204 · отдельный лист на каждый контейнер</span>
+            <span class="chip"><b></b>Готово за 3 с</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var BASE_W=1920, BASE_H=810, MIN_S=0.4, MAX_S=1.5;
+  var stageEl=document.querySelector('.stage');
+  /* общее фоновое поле: считается в пикселях от реальной высоты окна */
+  var LAYOUT=[100,100,88,77,87,75,68], IDX=5;
+  function field(){
+    var sc=document.querySelector('.screen'), nt=document.querySelector('.net');
+    if(window.innerWidth<=900){
+      sc.style.backgroundSize='100% 100%'; sc.style.backgroundPosition='0 0';
+      nt.style.height='100%'; nt.style.top='0'; return;
+    }
+    var pageVH=window.innerHeight/(LAYOUT[IDX]/100), total=0, before=0;
+    for(var i=1;i<LAYOUT.length;i++){ total+=LAYOUT[i]; if(i<IDX) before+=LAYOUT[i]; }
+    var f=Math.round(total/100*pageVH), o=Math.round(before/100*pageVH);
+    sc.style.backgroundSize='100% '+f+'px';
+    sc.style.backgroundPosition='0 -'+o+'px';
+    nt.style.height=f+'px'; nt.style.top=(-o)+'px';
+  }
+
+  function fit(){
+    if(window.innerWidth<=900){ stageEl.style.removeProperty('--s'); return; }
+    var s=Math.min(window.innerWidth/BASE_W, window.innerHeight/BASE_H);
+    stageEl.style.setProperty('--s', Math.max(MIN_S,Math.min(MAX_S,s)).toFixed(4));
+  }
+  function postHeight(){
+    if(window.parent===window) return;
+    var h = window.innerWidth<=900 ? stageEl.scrollHeight : Math.round(window.innerHeight);
+    window.parent.postMessage({type:'croft:height', height:h}, '*');
+  }
+
+  function u(v, unit){ return v + '<u>' + unit + '</u>'; }
+
+  /* Модели, часы, средний хешрейт и энергия взяты из выгрузок CROFT.
+     Воркеры, MAC и названия клиентов условные. */
+  /* ---------- вкладка 1: по контейнерам ---------- */
+  var CONT = [
+    { id:'1а 0-1', chip:'Контейнер 1а', ktp:'Ф1 (КТП 1)',      n:'235 устройств', h:'18,8 ч сред.', e:'14 795 кВт·ч',
+      note:'контейнер отключался по команде — наработка вдвое ниже соседних',
+      rows:[
+        ['Antminer T21','wrk-0101','18,80','62,96','Клиент Б','С1 · П1 · М01'],
+        ['Antminer T21','wrk-0102','18,80','63,41','Клиент Б','С1 · П1 · М02'],
+        ['Antminer T21','wrk-0103','18,77','62,10','Клиент Б','С1 · П2 · М03'],
+        ['Antminer T21','wrk-0104','18,80','64,02','Клиент Б','С1 · П2 · М04'],
+        ['Antminer T21','wrk-0105','18,80','62,88','Клиент Б','С2 · П1 · М05'],
+        ['Antminer T21','wrk-0106','18,77','63,15','Клиент Б','С2 · П1 · М06']
+      ] },
+    { id:'3а 4-5', chip:'Контейнер 3а', ktp:'Ф1 (КТП 2)',      n:'105 устройств', h:'32,7 ч сред.', e:'11 878 кВт·ч',
+      note:'смешанный контейнер: Scrypt и SHA-256 рядом',
+      rows:[
+        ['Antminer L9','wrk-0311','33,93','113,52','Клиент А','С1 · П1 · М11'],
+        ['Antminer L9','wrk-0312','33,93','114,07','Клиент А','С1 · П1 · М12'],
+        ['Antminer L9','wrk-0313','33,90','112,64','Клиент В','С1 · П2 · М13'],
+        ['Antminer S21+','wrk-0314','33,93','134,17','Клиент А','С2 · П1 · М14'],
+        ['Antminer S21+','wrk-0315','33,93','135,02','Клиент А','С2 · П1 · М15'],
+        ['Antminer L9','wrk-0316','33,93','113,88','Клиент В','С2 · П2 · М16']
+      ] },
+    { id:'4к 6-7', chip:'Контейнер 4к', ktp:'Ф1 (КТП 2)',      n:'204 устройства', h:'32,8 ч сред.', e:'23 610 кВт·ч',
+      note:'',
+      rows:[
+        ['Antminer T21','wrk-0421','33,90','115,74','Клиент А','С1 · П1 · М21'],
+        ['Antminer T21','wrk-0422','33,90','116,31','Клиент А','С1 · П1 · М22'],
+        ['Antminer T21','wrk-0423','33,87','114,96','Клиент А','С1 · П2 · М23'],
+        ['Antminer T21','wrk-0424','33,90','117,02','Клиент А','С1 · П2 · М24'],
+        ['Antminer T21','wrk-0425','33,90','115,18','Клиент А','С2 · П1 · М25'],
+        ['Antminer T21','wrk-0426','33,90','116,44','Клиент А','С2 · П1 · М26']
+      ] },
+    { id:'6к 10-11', chip:'Контейнер 6к', ktp:'Ф1 (КТП 3)',      n:'195 устройств', h:'32,9 ч сред.', e:'22 592 кВт·ч',
+      note:'',
+      rows:[
+        ['Antminer T21','wrk-0631','33,90','115,86','Клиент А','С1 · П1 · М31'],
+        ['Antminer T21','wrk-0632','33,90','116,72','Клиент А','С1 · П1 · М32'],
+        ['Antminer T21','wrk-0633','33,90','114,30','Клиент В','С1 · П2 · М33'],
+        ['Antminer T21','wrk-0634','33,87','117,45','Клиент А','С1 · П2 · М34'],
+        ['Antminer T21','wrk-0635','33,90','115,09','Клиент А','С2 · П1 · М35'],
+        ['Antminer T21','wrk-0636','33,90','116,88','Клиент В','С2 · П1 · М36']
+      ] },
+    { id:'7к 12-13', chip:'Контейнер 7к', ktp:'Ф1 (КТП 4)',      n:'278 устройств', h:'33,0 ч сред.', e:'28 824 кВт·ч',
+      note:'три модели в одном контейнере, три разных клиента',
+      rows:[
+        ['Antminer S21 Pro','wrk-0741','33,90','117,28','Клиент А','С1 · П1 · М41'],
+        ['Antminer S21 Pro','wrk-0742','33,90','118,04','Клиент А','С1 · П1 · М42'],
+        ['Antminer S21','wrk-0743','33,90','120,11','Клиент Б','С1 · П2 · М43'],
+        ['Antminer S21','wrk-0744','33,90','119,36','Клиент Б','С1 · П2 · М44'],
+        ['Antminer S19j XP','wrk-0745','33,93','107,62','Клиент В','С2 · П1 · М45'],
+        ['Antminer S19j XP','wrk-0746','33,93','109,68','Клиент В','С2 · П1 · М46']
+      ] },
+    { id:'11к 40-41', chip:'Контейнер 11к', ktp:'Ф1 (КТП 2, 3, 5)', n:'158 устройств', h:'32,7 ч сред.', e:'27 982 кВт·ч',
+      note:'иммерсионный контейнер — потребление на машину почти вдвое выше',
+      rows:[
+        ['Antminer S21+ Hyd.','wrk-1151','33,77','180,94','Клиент А','С1 · П1 · М51'],
+        ['Antminer S21+ Hyd.','wrk-1152','33,77','182,31','Клиент А','С1 · П1 · М52'],
+        ['Antminer S21+ Hyd.','wrk-1153','33,77','179,68','Клиент А','С1 · П2 · М53'],
+        ['Antminer S21 XP Hyd.','wrk-1154','33,57','198,80','Клиент А','С1 · П2 · М54'],
+        ['Antminer S21+ Hyd.','wrk-1155','33,77','181,42','Клиент А','С2 · П1 · М55'],
+        ['Antminer S21+ Hyd.','wrk-1156','33,77','183,05','Клиент А','С2 · П1 · М56']
+      ] }
+  ];
+  var CONT_COLS = ['Модель','Воркер','Часы работы','Энергия, кВт·ч','Клиент','Место в контейнере'];
+
+  /* ---------- вкладка 2: по клиентам ---------- */
+  var CLI = {
+    name:'Отчёт по клиентам',
+    sub:'Клиент А · 1 769 устройств · 20–21 августа 2026',
+    foot:'6 строк из 1 769 · в файле также серийный номер, заводской хешрейт и номер пользователя',
+    cols:['Модель','Воркер','Алгоритм','MAC','Часы работы','Средний хешрейт','Энергия, кВт·ч'],
+    tcls:'cli',
+    rows:[
+      ['Antminer T21','wrk-0421','SHA256','4a:1f:c2:07:b3:5e','33,90', u('191,73','TH/s'),'115,74'],
+      ['Antminer T21','wrk-0631','SHA256','6c:82:0d:41:9a:2f','33,90', u('192,40','TH/s'),'115,86'],
+      ['Antminer S21+ Hyd.','wrk-1151','SHA256','02:d7:65:1c:88:b4','33,77', u('366,49','TH/s'),'180,94'],
+      ['Antminer S21 Pro','wrk-0741','SHA256','b0:3e:a9:57:20:6d','33,90', u('237,41','TH/s'),'117,28'],
+      ['Antminer S21+','wrk-0314','SHA256','de:41:7b:e0:35:c8','33,93', u('238,44','TH/s'),'134,17'],
+      ['Antminer L9','wrk-0311','Scrypt','9e:08:44:d2:6f:13','33,93', u('16,59','GH/s'),'113,52']
+    ]
+  };
+
+  var aTabs  = document.getElementById('aTabs'),
+      aConts = document.getElementById('aConts'),
+      aHead  = document.getElementById('aHead'), aBody = document.getElementById('aBody'),
+      aName  = document.getElementById('aName'), aSub  = document.getElementById('aSub'),
+      aFoot  = document.getElementById('aFoot'),
+      aTable = aHead.closest('table'),
+      aTab = 0, aC = 2, aTimer = null, aStep = 2;
+
+  aConts.innerHTML = CONT.map(function(c, i){
+    return '<button class="cchip' + (i === 2 ? ' on' : '') + '" type="button" data-c="' + i + '">'
+      + c.chip + '</button>';
+  }).join('');
+
+  function fill(cols, rows){
+    aHead.innerHTML = cols.map(function(c){ return '<th>'+c+'</th>'; }).join('');
+    aBody.innerHTML = rows.map(function(r){
+      return '<tr class="row">' + r.map(function(v){ return '<td>'+v+'</td>'; }).join('') + '</tr>';
+    }).join('');
+    var rs = aBody.querySelectorAll('tr.row');
+    for (var i=0;i<rs.length;i++){
+      if (reduce) { rs[i].classList.add('on'); continue; }
+      (function(el,n){ setTimeout(function(){ el.classList.add('on'); }, 90*n+60); })(rs[i], i);
+    }
+  }
+
+  function render(){
+    var bs = aTabs.querySelectorAll('.tab');
+    for (var i=0;i<bs.length;i++) bs[i].classList.toggle('on', i === aTab);
+    aConts.classList.toggle('hide', aTab !== 0);
+    if (aTab === 0){
+      var cs = aConts.querySelectorAll('.cchip');
+      for (var k=0;k<cs.length;k++) cs[k].classList.toggle('on', k === aC);
+      var c = CONT[aC];
+      aTable.className = 'rep';
+      aName.textContent = 'Контейнер ' + c.id;
+      aSub.textContent = c.ktp + ' · ' + c.n + ' · ' + c.h + ' · ' + c.e;
+      aFoot.textContent = '6 строк из ' + c.n.split(' ')[0] + ' · '
+        + (c.note || 'отдельный лист на каждый контейнер');
+      fill(CONT_COLS, c.rows);
+    } else {
+      aTable.className = 'rep ' + CLI.tcls;
+      aName.textContent = CLI.name;
+      aSub.textContent = CLI.sub;
+      aFoot.textContent = CLI.foot;
+      fill(CLI.cols, CLI.rows);
+    }
+  }
+
+  var SCRIPT = [[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[1,0]];
+  function aAuto(){
+    if (reduce || aTimer) return;
+    aTimer = setInterval(function(){
+      aStep = (aStep + 1) % SCRIPT.length;
+      aTab = SCRIPT[aStep][0];
+      if (aTab === 0) aC = SCRIPT[aStep][1];
+      render();
+    }, 4200);
+  }
+  function aStop(){ clearInterval(aTimer); aTimer = null; }
+
+  aTabs.addEventListener('click', function(e){
+    var b = e.target.closest('.tab'); if (!b) return;
+    aStop(); aTab = +b.dataset.i; render();
+  });
+  aConts.addEventListener('click', function(e){
+    var b = e.target.closest('.cchip'); if (!b) return;
+    aStop(); aTab = 0; aC = +b.dataset.c; render();
+  });
+  document.body.addEventListener('mouseenter', aStop, true);
+  document.body.addEventListener('mouseleave', function(){ aAuto(); });
+
+  var ctaBtn=document.getElementById('cta');
+  if(ctaBtn) ctaBtn.addEventListener('click', function(){
+    if(window.parent===window) return;
+    try{ window.parent.postMessage({type:'croft:cta', form:'demo', screen:'reports'}, '*'); }catch(err){}
+  });
+
+  render(); aAuto();
+  field(); fit(); postHeight();
+  window.addEventListener('resize', function(){ field(); fit(); postHeight(); });
+  window.addEventListener('load', function(){ fit(); postHeight(); });
+})();
+</script>
+</body>
+</html>
