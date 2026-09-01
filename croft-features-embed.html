@@ -147,6 +147,11 @@
      поэтому высота блока предсказуема и равна MLAY[MIDX] * s. */
   .mnet{display:none}
   @media (max-width:899px){
+    /* Высоты блоков посчитаны попиксельно и зашиты в шесть файлов сразу,
+       поэтому автоувеличение шрифта здесь стоит дороже обычного: выросший
+       текст сдвинул бы общее фоновое поле на стыке. В первом экране эта
+       строка стояла с самого начала, здесь её не хватало. */
+    html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     .net{display:none}
     .mnet{position:absolute;left:0;width:100%;opacity:.6;pointer-events:none;display:block}
     .screen{display:block;height:auto;min-height:0;overflow:hidden;
@@ -186,7 +191,11 @@
     .chart{top:42px;bottom:24px;left:0;right:0}
     .cursor{top:42px;bottom:24px}
     .drlab{font-size:18px;top:52px}
-    .drsub{font-size:9.5px;top:75px;letter-spacing:.1em}
+    /* Подпись под «DR» на 9.5px с разрядкой .1em занимала 103px при
+       ширине полосы провала в 101: первая буква попадала на вертикальную
+       линию нагрузки и читалась обрубком. 9px и .04em дают 90px —
+       по пять пикселей воздуха с каждой стороны. */
+    .drsub{font-size:9px;top:75px;letter-spacing:.04em}
     .ax{font-size:10px;left:14px;color:rgba(214,228,238,.56)}
 
     /* --- 2: лист отчёта ---
@@ -200,7 +209,12 @@
     .xl-h span:nth-child(4),.xl-r span:nth-child(4){display:none}
     .xl-h{padding-bottom:5px;margin-bottom:2px}
     .xl-h span{font-size:9px;letter-spacing:.04em}
-    .xl-r{padding:9px 0}
+    /* Лист был на 7px выше своего окна: снизу торчала линейка пятой
+       строки, и лист выглядел не законченным, а оборванным. Пиксель
+       с каждой строки и снятая линейка под последней укладывают
+       содержимое ровно в 164px окна. */
+    .xl-r{padding:8px 0}
+    .xl-r:last-child{border-bottom:0}
     .xl-r span{font-size:11.5px}
     .meta{width:27%;gap:7px;top:0}
     .meta div{font-size:8.5px;letter-spacing:.06em;line-height:1.25;color:rgba(214,228,238,.58)}
