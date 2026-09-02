@@ -133,11 +133,6 @@
      поэтому высота блока предсказуема и равна MLAY[MIDX] * s. */
   .mnet{display:none}
   @media (max-width:899px){
-    /* Высоты блоков посчитаны попиксельно и зашиты в шесть файлов сразу,
-       поэтому автоувеличение шрифта здесь стоит дороже обычного: выросший
-       текст сдвинул бы общее фоновое поле на стыке. В первом экране эта
-       строка стояла с самого начала, здесь её не хватало. */
-    html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     .net{display:none}
     .mnet{position:absolute;left:0;width:100%;opacity:.6;pointer-events:none;display:block}
     .screen{display:block;height:auto;min-height:0;overflow:hidden;
