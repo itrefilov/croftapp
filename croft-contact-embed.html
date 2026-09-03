@@ -304,6 +304,18 @@
     try{ window.parent.postMessage({type:'croft:cta', form:'demo', screen:'contact'}, '*'); }catch(err){}
   });
 
+  /* Телефон, Telegram и почта лежат внутри кадра на чужом домене, поэтому
+     счётчик Метрики на Тильде этих нажатий не видит. Сообщаем наверх —
+     обвязка на Тильде превращает событие в цель. */
+  var LEADS=[['a[href^="tel:"]','phone'],['a[href*="t.me/"]','telegram'],['a[href^="mailto:"]','email']];
+  for(var li=0; li<LEADS.length; li++) (function(sel, kind){
+    var els=document.querySelectorAll(sel);
+    for(var i=0;i<els.length;i++) els[i].addEventListener('click', function(){
+      if(window.parent===window) return;
+      try{ window.parent.postMessage({type:'croft:lead', kind:kind, screen:'contact'}, '*'); }catch(err){}
+    });
+  })(LEADS[li][0], LEADS[li][1]);
+
   field(); fit(); postHeight();
   window.addEventListener('resize', function(){ field(); fit(); postHeight(); });
   if (document.fonts && document.fonts.ready)
